@@ -332,6 +332,7 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
         <ul>
           <li>Ghiera con tre voci (Naviga, Rotte, Diario) allineate alle tacche principali</li>
           <li>Rimossi Esplora e Tragitti, e i testi sopra la ghiera</li>
+          <li>La freccia segue la direzione di marcia (GPS) e, da fermo, la bussola</li>
         </ul>
       </div>
       <div class="stage-item">
@@ -591,14 +592,52 @@ window.addEventListener('unhandledrejection', (e) => {
   function browseCamera(duration = 1800) {
     map.flyTo({ center: state.origin, zoom: 15.6, pitch: 60, bearing: -20, padding: { top: 120, bottom: 240, left: 0, right: 0 }, duration });
   }
+  // Posizione seguita in continuo. Direzione della freccia:
+  // in movimento la direzione di marcia del GPS, da fermo la bussola del telefono.
+  const heading = { course: null, compass: null, shown: 0 };
+  let firstFix = true;
   if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition((pos) => {
-      state.origin = [pos.coords.longitude, pos.coords.latitude];
-      puck.setLngLat(state.origin);
-      applyLight();
-      if (state.phase === 'browse' && state.section === 0) browseCamera(2400);
-    }, () => toast('Posizione non disponibile: parto da Milano, piazza del Duomo.'), { enableHighAccuracy: true, timeout: 8000 });
+    navigator.geolocation.watchPosition((pos) => {
+      const c = pos.coords;
+      state.origin = [c.longitude, c.latitude];
+      heading.course = (typeof c.heading === 'number' && !isNaN(c.heading) && (c.speed || 0) > 1) ? c.heading : null;
+      if (!state.sim) puck.setLngLat(state.origin);
+      if (firstFix) {
+        firstFix = false;
+        applyLight();
+        if (state.phase === 'browse' && state.section === 0) browseCamera(2400);
+      }
+    }, () => { if (firstFix) toast('Posizione non disponibile: parto da Milano, piazza del Duomo.'); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 });
   }
+  function onOrientation(e) {
+    let h = null;
+    if (typeof e.webkitCompassHeading === 'number') h = e.webkitCompassHeading;          // iPhone
+    else if (e.absolute && typeof e.alpha === 'number') h = (360 - e.alpha) % 360;      // Android
+    if (h === null) return;
+    const screenAngle = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
+    heading.compass = (h + screenAngle + 360) % 360;
+  }
+  window.addEventListener('deviceorientationabsolute', onOrientation);
+  window.addEventListener('deviceorientation', onOrientation);
+  // Su iPhone la bussola richiede un permesso, che Safari può chiedere solo dopo un tocco.
+  document.addEventListener('click', () => {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().catch(() => {});
+    }
+  }, { once: true });
+  (function rotatePuck() {
+    if (!state.sim) {
+      const h = heading.course !== null ? heading.course : heading.compass;
+      if (h !== null) {
+        const diff = ((h - heading.shown + 540) % 360) - 180;
+        if (Math.abs(diff) > 0.5) {
+          heading.shown = (heading.shown + diff * 0.18 + 360) % 360;
+          puck.setRotation(heading.shown);
+        }
+      }
+    }
+    requestAnimationFrame(rotatePuck);
+  })();
 
   // ---------- Luoghi salvati ----------
   const savedData = () => load('columbus-saved', { home: null, work: null, favorites: [] });
@@ -1063,7 +1102,7 @@ window.addEventListener('unhandledrejection', (e) => {
     $('#starMenu').hidden = true;
     if (map.getSource('route')) { map.getSource('route').setData(EMPTY); map.getSource('alt').setData(EMPTY); }
     if (map.getLayer('route-flow')) map.setPaintProperty('route-flow', 'line-opacity', 0.9);
-    puck.setLngLat(state.origin).setRotation(0);
+    puck.setLngLat(state.origin).setRotation(heading.shown);
     show('browse');
     selectSection(0);
     browseCamera(1600);
