@@ -134,7 +134,8 @@ body[data-phase="browse"][data-panel="soft"] .mapboxgl-ctrl-bottom-left, body[da
 body[data-phase="browse"][data-panel="solid"] .mapboxgl-ctrl-bottom-left, body[data-phase="browse"][data-panel="solid"] .mapboxgl-ctrl-bottom-right { visibility: hidden; }
 /* Ricerca lungo il percorso (in guida) */
 #nav .sar-btn { position: absolute; right: 20px; bottom: calc(var(--bottom) + 64px); width: 48px; height: 48px; background: rgba(7,10,16,0.82); box-shadow: 0 6px 18px rgba(0,0,0,0.45); }
-#nav .sim { right: auto; left: 26px; }
+#nav .sim { right: auto; left: 26px; background: none; border: 0; padding: 6px 0; }
+#nav .sim b { color: var(--gold-light); font-weight: 600; }
 body[data-sar="open"] #nav .sar-btn { display: none; }
 .trip > span, .trip > small { white-space: nowrap; }
 body[data-phase="nav"] #toast { top: auto; bottom: calc(var(--bottom) + 124px); }
@@ -472,7 +473,7 @@ body.deep .deep-badge { display: block; }
       <div class="sar-cats" id="sarCats"></div>
       <div class="list" id="sarList"></div>
     </div>
-    <div class="sim" id="simLabel">SIMULAZIONE ×4</div>
+    <button class="sim" id="simLabel" aria-label="Velocità della simulazione">SIMULAZIONE · 1×</button>
     <div class="trip">
       <span class="eta" id="eta"></span><small>arrivo</small>
       <span class="dot"></span><span id="remMin"></span>
@@ -653,7 +654,9 @@ window.addEventListener('unhandledrejection', (e) => {
 (() => {
   const EMBEDDED_TOKEN = 'pk.eyJ1IjoiZmVkZXJpY29hbnRvbmluaTE5OTQiLCJhIjoiY213amN5dTJyMDIwcDJ4czhsY2t6c202NCJ9.xsP32s8eJrEaB3tq9PG3nw';
   const DEFAULT_CENTER = [9.1900, 45.4642]; // Milano, piazza del Duomo
-  const SIM_SPEED = 4;
+  // Velocità della simulazione: 1× = tempo reale (alla velocità media prevista dal percorso); si cambia toccando l'etichetta.
+  const SIM_SPEEDS = [1, 2, 4];
+  let simSpeed = SIM_SPEEDS.includes(load('columbus-sim-speed', 1)) ? load('columbus-sim-speed', 1) : 1;
   const $ = (s) => document.querySelector(s);
 
   function load(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
@@ -2026,11 +2029,22 @@ window.addEventListener('unhandledrejection', (e) => {
     voice.unlock();
     voice.prepare(p);
     if (real) keepAwake(true);
-    $('#simLabel').textContent = real ? 'GPS' : 'SIMULAZIONE ×4';
+    paintSimLabel();
     showDestLight(state.dest.coord);
     show('nav');
     state.sim.raf = requestAnimationFrame(tick);
   }
+  function paintSimLabel() {
+    const real = state.sim && state.sim.real;
+    $('#simLabel').innerHTML = real ? 'GPS' : 'SIMULAZIONE · <b>' + simSpeed + '×</b>';
+    $('#simLabel').disabled = !!real;
+  }
+  $('#simLabel').onclick = () => {
+    if (!state.sim || state.sim.real) return;
+    simSpeed = SIM_SPEEDS[(SIM_SPEEDS.indexOf(simSpeed) + 1) % SIM_SPEEDS.length];
+    store('columbus-sim-speed', simSpeed);
+    paintSimLabel();
+  };
   $('#start').onclick = () => startNav(true);
   $('#simulate').onclick = () => startNav(false);
 
@@ -2287,7 +2301,8 @@ window.addEventListener('unhandledrejection', (e) => {
       const want = s.course !== null ? s.course : bearingOf(a, b);
       const diff = ((want - s.bearing + 540) % 360) - 180; s.bearing = (s.bearing + diff * Math.min(1, dt * 2.5) + 360) % 360;
     } else {
-      s.t = Math.min(s.p.total, s.t + 14 * SIM_SPEED * dt);
+      const avg = Math.min(35, Math.max(4, s.r.distance / Math.max(1, s.r.duration))); // m/s, traffico compreso
+      s.t = Math.min(s.p.total, s.t + avg * simSpeed * dt);
       while (s.seg < s.p.cum.length - 2 && s.p.cum[s.seg + 1] < s.t) s.seg++;
       const a = s.p.c[s.seg], b = s.p.c[Math.min(s.seg + 1, s.p.c.length - 1)];
       const len = (s.p.cum[s.seg + 1] - s.p.cum[s.seg]) || 1;
