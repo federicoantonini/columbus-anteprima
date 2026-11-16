@@ -392,6 +392,7 @@ function showFatal(message) {
   const msg = document.getElementById('fatalMsg');
   if (!box || !msg) return;
   message = String(message).replace(/access_token=[^&\s]+/g, 'access_token=…');
+  if (msg.textContent.includes(message)) return; // niente ripetizioni
   msg.textContent = (msg.textContent ? msg.textContent + '\n' : '') + message;
   box.hidden = false;
 }
@@ -528,7 +529,11 @@ window.addEventListener('unhandledrejection', (e) => {
   map.on('load', () => { mapLoaded = true; });
   map.on('error', (e) => {
     const err = (e && e.error) || {};
-    if (err.status === 401 || err.status === 403) showFatal('Mapbox rifiuta il token (errore ' + err.status + '). Se il token è limitato a un indirizzo web, controlla che l\'indirizzo di questa pagina sia nell\'elenco.');
+    if (err.status === 401 || err.status === 403) {
+      let what = '';
+      try { const u = new URL(err.url); what = u.host + u.pathname.split('/').slice(0, 3).join('/'); } catch (x) {}
+      showFatal('Mapbox rifiuta il token (errore ' + err.status + ')' + (what ? ' per ' + what : '') + '.\nPagina: ' + location.origin + location.pathname + '\nControlla che questo indirizzo sia tra le URL del token, che le modifiche siano salvate, e riprova tra qualche minuto in una scheda normale (non privata).');
+    }
     else if (!mapLoaded) showFatal('Errore nel caricare la mappa: ' + (err.message || 'sconosciuto'));
   });
   setTimeout(() => { if (!mapLoaded) showFatal('La mappa non ha ricevuto dati da Mapbox entro 15 secondi.'); }, 15000);
