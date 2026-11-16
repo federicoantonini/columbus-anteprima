@@ -127,6 +127,9 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 .search-row input::placeholder { color: var(--secondary); }
 .search-row button { background: none; border: 0; color: var(--gold); font-size: 16px; }
 #results { flex: 1; overflow-y: auto; }
+#results:empty { display: none; }
+/* Nella ricerca la mappa è coperta: logo e attribuzione non devono finire sopra l'elenco. */
+body[data-phase="search"] .mapboxgl-ctrl-bottom-left, body[data-phase="search"] .mapboxgl-ctrl-bottom-right { visibility: hidden; }
 .result { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 0; background: none; border: 0; border-bottom: 1px solid #1A2029; text-align: left; }
 .result .ic { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--raised); display: flex; align-items: center; justify-content: center; color: var(--gold); }
 .result b { display: block; font-weight: 500; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -163,7 +166,10 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 .cat-pin-wrap { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; }
 .cat-pin { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 1px solid #FFF4D6; color: #0A0D12; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 35% 30%, #FFF1CC, #E9C46A 55%, #B98F3E); box-shadow: 0 0 0 4px rgba(243,213,140,0.16), 0 4px 12px rgba(0,0,0,0.55); transition: transform .2s ease, box-shadow .2s ease; }
 .cat-pin.sel { transform: scale(1.22); box-shadow: 0 0 0 6px rgba(243,213,140,0.28), 0 0 24px rgba(243,213,140,0.6); }
-#place .head { justify-content: space-between; }
+#place .head { min-height: 0; }
+.place-title { display: flex; align-items: flex-start; gap: 12px; }
+.place-title h1 { flex: 1; min-width: 0; }
+.place-title .close { width: 38px; height: 38px; margin-top: 2px; color: var(--bone); background: rgba(21,27,37,0.95); border-color: #2A313C; }
 .place-card { margin: 0 12px calc(var(--bottom) + 6px); padding: 22px 20px 18px; border-radius: 26px; background: rgba(10,13,19,0.96); border: 1px solid rgba(233,196,106,0.38); box-shadow: 0 -10px 40px rgba(0,0,0,0.55); display: flex; flex-direction: column; gap: 8px; }
 .place-card h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 500; font-size: 32px; line-height: 1.08; }
 .place-card .addr { margin: 0; font-size: 14px; color: var(--secondary); line-height: 1.4; }
@@ -367,13 +373,14 @@ body.deep .deep-badge { display: block; }
 
   <!-- Scheda del luogo -->
   <section id="place" class="screen" hidden>
-    <div class="head">
-      <button class="round" id="backPlace" aria-label="Torna ai risultati"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
-    </div>
+    <div class="head"></div>
     <div class="spacer"></div>
     <div class="place-card">
       <div class="kicker" id="placeCat"></div>
-      <h1 id="placeName"></h1>
+      <div class="place-title">
+        <h1 id="placeName"></h1>
+        <button class="round close" id="backPlace" aria-label="Chiudi la scheda"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
       <p class="addr" id="placeAddr"></p>
       <div class="place-meta"><span id="placeDist"></span><span class="open" id="placeHours"></span></div>
       <div class="place-actions">
