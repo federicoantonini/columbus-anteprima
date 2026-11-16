@@ -114,7 +114,7 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
   box-shadow: 0 -10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(233,196,106,0.55); }
 .dial.dragging { transition: none; }
 .ticks { position: absolute; inset: 0; border-radius: 50%;
-  background: repeating-conic-gradient(from -0.4deg, rgba(243,213,140,0.85) 0 0.8deg, transparent 0.8deg 25deg), repeating-conic-gradient(from -0.2deg, rgba(233,196,106,0.35) 0 0.4deg, transparent 0.4deg 5deg);
+  background: repeating-conic-gradient(from -0.4deg, rgba(243,213,140,0.85) 0 0.8deg, transparent 0.8deg 30deg), repeating-conic-gradient(from -0.2deg, rgba(233,196,106,0.35) 0 0.4deg, transparent 0.4deg 5deg);
   -webkit-mask: radial-gradient(circle, transparent 0 236px, #000 237px 248px, transparent 249px); mask: radial-gradient(circle, transparent 0 236px, #000 237px 248px, transparent 249px); }
 .dial button { position: absolute; left: 50%; top: 50%; background: none; border: 0; padding: 10px 8px; font-size: 12px; font-weight: 600; letter-spacing: .3em; white-space: nowrap; color: var(--secondary); }
 .dial button[aria-pressed="true"] { color: var(--gold-light); }
@@ -327,13 +327,22 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
     <header><h2>Tappe di sviluppo</h2><button class="close" data-close>Chiudi</button></header>
     <div class="scroll">
       <div class="stage-item">
-        <div class="kicker">Tappa 3 · questa versione</div>
+        <div class="kicker">Tappa 4 · questa versione</div>
+        <b>Sestante essenziale</b>
+        <ul>
+          <li>Ghiera con tre voci (Naviga, Rotte, Diario) allineate alle tacche principali</li>
+          <li>Rimossi Esplora e Tragitti, e i testi sopra la ghiera</li>
+        </ul>
+      </div>
+      <div class="stage-item">
+        <div class="kicker">Tappa 3</div>
         <b>Diario, rotte, tragitti</b>
         <ul>
           <li>Diario di bordo: all'arrivo "Salva nel diario", carta nautica del mese, poster</li>
           <li>Rotte salvate: stella nell'anteprima → Casa, Lavoro, preferiti</li>
-          <li>Tragitti: quando partire per arrivare in orario, con il traffico di adesso</li>
+          <li>Tragitti (poi rimossi nella tappa 4)</li>
         </ul>
+        <a href="tappa-3/">Apri la versione della tappa 3 →</a>
       </div>
       <div class="stage-item">
         <div class="kicker">Tappa 2</div>
@@ -427,7 +436,7 @@ window.addEventListener('unhandledrejection', (e) => {
 
   // ---------- Stato ----------
   const state = { phase: 'browse', origin: DEFAULT_CENTER, dest: null, routes: [], sel: 0, sim: null, orbit: null, section: 0, lightMode: load('columbus-light', 'auto'), glare: {}, logMonth: null, sample: null, saved: false };
-  const SECTIONS = ['ESPLORA', 'NAVIGA', 'ROTTE', 'TRAGITTI', 'DIARIO'];
+  const SECTIONS = ['NAVIGA', 'ROTTE', 'DIARIO'];
 
   // ---------- Utilità ----------
   const toR = Math.PI / 180, toD = 180 / Math.PI;
@@ -585,7 +594,7 @@ window.addEventListener('unhandledrejection', (e) => {
       state.origin = [pos.coords.longitude, pos.coords.latitude];
       puck.setLngLat(state.origin);
       applyLight();
-      if (state.phase === 'browse' && state.section < 2) browseCamera(2400);
+      if (state.phase === 'browse' && state.section === 0) browseCamera(2400);
     }, () => toast('Posizione non disponibile: parto da Milano, piazza del Duomo.'), { enableHighAccuracy: true, timeout: 8000 });
   }
 
@@ -608,47 +617,40 @@ window.addEventListener('unhandledrejection', (e) => {
 
   // ---------- Sestante e sezioni ----------
   const dial = $('#dial');
-  const STEP = 28;
+  const STEP = 30;   // le voci stanno sulle tacche principali (una ogni 30°, 12 in tutto il giro)
+  const CENTER = Math.floor(SECTIONS.length / 2);
   SECTIONS.forEach((label, i) => {
     const b = document.createElement('button');
     b.textContent = label;
-    b.style.transform = 'translate(-50%, -50%) rotate(' + ((i - 2) * STEP) + 'deg) translateY(-204px)';
+    b.style.transform = 'translate(-50%, -50%) rotate(' + ((i - CENTER) * STEP) + 'deg) translateY(-204px)';
     b.onclick = () => selectSection(i);
     dial.appendChild(b);
   });
   function selectSection(i, haptic = true) {
     state.section = Math.max(0, Math.min(SECTIONS.length - 1, i));
-    dial.style.transform = 'rotate(' + (-(state.section - 2) * STEP) + 'deg)';
+    dial.style.transform = 'rotate(' + (-(state.section - CENTER) * STEP) + 'deg)';
     dial.querySelectorAll('button').forEach((b, j) => b.setAttribute('aria-pressed', String(j === state.section)));
-    const isPanel = state.section >= 2;
+    const isPanel = state.section >= 1;
     $('#homeTop').hidden = isPanel;
     $('#homeSpacer').hidden = isPanel;
     $('#sectionCard').hidden = isPanel;
     $('#sectionView').hidden = !isPanel;
-    document.body.dataset.panel = state.section === 4 ? 'solid' : isPanel ? 'soft' : '';
-    if (state.section === 0 || state.section === 1) renderCard();
-    if (state.section === 2) renderSaved();
-    if (state.section === 3) renderCommute();
-    if (state.section === 4) renderLogbook();
+    document.body.dataset.panel = state.section === 2 ? 'solid' : isPanel ? 'soft' : '';
+    if (state.section === 0) renderCard();
+    if (state.section === 1) renderSaved();
+    if (state.section === 2) renderLogbook();
     if (haptic && navigator.userActivation && navigator.userActivation.hasBeenActive && navigator.vibrate) navigator.vibrate(8);
   }
   function renderCard() {
     const s = savedData();
     const shortcuts = [['home', s.home], ['work', s.work]].filter((x) => x[1]);
-    const explore = state.section === 0;
-    $('#sectionCard').innerHTML =
-      '<div class="kicker">' + (explore ? 'Esplora' : 'Nessuna rotta attiva') + '</div>' +
-      '<h2>' + (explore ? 'Dove si va stasera?' : 'Scegli una meta') + '</h2>' +
-      '<p>' + (explore ? 'Cerca un indirizzo o un luogo' : 'La rotta comparirà qui') + '</p>' +
-      (explore && shortcuts.length ? '<div class="chips">' + shortcuts.map(([k]) => '<button class="chip" data-shortcut="' + k + '">' + (k === 'home' ? '⌂ Casa' : '▣ Lavoro') + '</button>').join('') + '</div>' : '') +
-      '<button class="link" data-open-search>CERCA UNA DESTINAZIONE</button>';
-    $('#sectionCard [data-open-search]').onclick = openSearch;
+    $('#sectionCard').innerHTML = shortcuts.length ? '<div class="chips">' + shortcuts.map(([k]) => '<button class="chip" data-shortcut="' + k + '">' + (k === 'home' ? '⌂ Casa' : '▣ Lavoro') + '</button>').join('') + '</div>' : '';
     document.querySelectorAll('[data-shortcut]').forEach((b) => b.onclick = () => { const k = b.dataset.shortcut; choose(asDestination(savedData()[k], k)); });
   }
   selectSection(0, false);
   let dragX = null;
   $('#sextant').addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; dragX = e.clientX; dial.classList.add('dragging'); $('#sextant').setPointerCapture(e.pointerId); });
-  $('#sextant').addEventListener('pointermove', (e) => { if (dragX === null) return; dial.style.transform = 'rotate(' + (-(state.section - 2) * STEP + (e.clientX - dragX) / 4) + 'deg)'; });
+  $('#sextant').addEventListener('pointermove', (e) => { if (dragX === null) return; dial.style.transform = 'rotate(' + (-(state.section - CENTER) * STEP + (e.clientX - dragX) / 4) + 'deg)'; });
   $('#sextant').addEventListener('pointerup', (e) => { if (dragX === null) return; const steps = Math.round((e.clientX - dragX) / 4 / STEP); dragX = null; dial.classList.remove('dragging'); selectSection(state.section - steps); });
 
   // Rotte salvate
@@ -665,79 +667,6 @@ window.addEventListener('unhandledrejection', (e) => {
     document.querySelectorAll('[data-port]').forEach((b) => b.onclick = () => { const k = b.dataset.port; const p = savedData()[k]; if (p) choose(asDestination(p, k)); else openSearch(); });
     document.querySelectorAll('[data-fav]').forEach((b) => b.onclick = () => choose(savedData().favorites[Number(b.dataset.fav)]));
     document.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => { const d = savedData(); d.favorites.splice(Number(b.dataset.del), 1); store('columbus-saved', d); renderSaved(); });
-  }
-
-  // Tragitti
-  async function renderCommute() {
-    const s = savedData();
-    const toWork = new Date().getHours() < 14;
-    const view = $('#sectionView');
-    const header = '<div><div class="kicker">Tragitti</div><h1>' + (toWork ? 'Casa → Lavoro' : 'Lavoro → Casa') + '</h1></div>';
-    if (!s.home || !s.work) {
-      view.innerHTML = header + '<div class="panel" style="border-color: rgba(233,196,106,0.25)"><h2 style="margin:0;font-family:var(--serif);font-weight:500;font-size:24px">Imposta Casa e Lavoro</h2><p class="muted">Cerca il tuo indirizzo di casa, apri l\'anteprima del percorso e tocca la stella → "Imposta come Casa". Poi fai lo stesso per il lavoro.</p><button class="link" style="align-self:flex-start" id="commuteSearch">CERCA UN INDIRIZZO</button></div>';
-      $('#commuteSearch').onclick = openSearch;
-      return;
-    }
-    // Mattina: "voglio arrivare al lavoro entro le…". Pomeriggio: "esco dal lavoro alle…".
-    const key = toWork ? 'columbus-arrive-by' : 'columbus-leave-work', def = toWork ? '09:00' : '18:00';
-    const timeValue = load(key, def);
-    view.innerHTML = header + '<div class="panel" id="commuteHero"><div class="hint">Controllo il traffico…</div></div>' +
-      '<label class="setting"><span style="color:var(--gold)">◷</span> ' + (toWork ? 'Voglio arrivare entro le' : 'Esco dal lavoro alle') + ' <input type="time" id="commuteTime" value="' + timeValue + '"></label>' +
-      '<p class="muted" style="font-size:12px">Nell\'app iPhone c\'è anche l\'avviso "è ora di partire".</p>';
-    $('#commuteTime').onchange = () => { store(key, $('#commuteTime').value || def); drawCommute(); };
-    const from = toWork ? s.home : s.work, to = toWork ? s.work : s.home;
-    try {
-      const routes = await fetchRoutes(from.coord, to.coord);
-      state.commute = { route: routes[0], toWork, to: asDestination(to, toWork ? 'work' : 'home') };
-      drawCommute();
-    } catch (e) {
-      if ($('#commuteHero')) $('#commuteHero').innerHTML = '<p class="muted">Percorso non disponibile (' + esc(e.message) + ').</p>';
-    }
-  }
-  function drawCommute() {
-    const hero = $('#commuteHero');
-    if (!hero || !state.commute) return;
-    const r = state.commute.route;
-    let leave, target, bigLabel, bigTime, rightLine;
-    if (state.commute.toWork) {
-      const [h, m] = load('columbus-arrive-by', '09:00').split(':').map(Number);
-      target = new Date(); target.setHours(h, m, 0, 0);
-      if (target.getTime() - r.duration * 1000 <= Date.now()) target.setDate(target.getDate() + 1);
-      leave = new Date(target.getTime() - r.duration * 1000);
-      bigLabel = leave.toDateString() === new Date().toDateString() ? 'Parti alle' : 'Domani parti alle';
-      bigTime = fmtHM(leave);
-      rightLine = Math.round(r.duration / 60) + ' min · arrivo ' + fmtHM(target);
-    } else {
-      const [h, m] = load('columbus-leave-work', '18:00').split(':').map(Number);
-      leave = new Date(); leave.setHours(h, m, 0, 0);
-      const now = leave.getTime() <= Date.now();
-      if (now) leave = new Date();
-      target = new Date(leave.getTime() + r.duration * 1000);
-      bigLabel = now ? 'Se parti adesso, arrivi a casa alle' : 'Arrivi a casa alle';
-      bigTime = fmtHM(target);
-      rightLine = Math.round(r.duration / 60) + ' min · ' + (now ? 'partenza ora' : 'partenza ' + fmtHM(leave));
-    }
-    const delta = r.duration_typical ? Math.round((r.duration - r.duration_typical) / 60) : 0;
-    const cong = (r.legs[0].annotation && r.legs[0].annotation.congestion) || [];
-    const color = (v) => v === 'heavy' || v === 'severe' ? 'var(--red)' : v === 'moderate' ? 'var(--amber)' : 'var(--green)';
-    let strip = '';
-    if (cong.length) {
-      let cur = cong[0], n = 0;
-      const push = () => { strip += '<span style="flex:' + n + ';background:' + color(cur) + '"></span>'; };
-      cong.forEach((v) => { if (v === cur) n++; else { push(); cur = v; n = 1; } });
-      push();
-    } else strip = '<span style="flex:1;background:var(--green)"></span>';
-    const [tLabel] = traffic(r);
-    hero.innerHTML =
-      '<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px">' +
-        '<div><div class="muted" style="font-size:13px">' + bigLabel + '</div><div class="big-time">' + bigTime + '</div></div>' +
-        '<div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span style="font-size:14px;font-weight:500">' + rightLine + '</span>' +
-        (delta ? '<span class="badge" style="color:' + (delta > 0 ? '#F0B65A' : 'var(--green)') + '">' + (delta > 0 ? '+' : '') + delta + ' min sul solito</span>' : '') + '</div>' +
-      '</div>' +
-      '<div class="strip">' + strip + '</div>' +
-      '<div class="muted" style="font-size:12px">' + (r.legs[0].summary ? 'via ' + esc(r.legs[0].summary) + ' · ' : '') + 'traffico ' + tLabel.toLowerCase() + '</div>' +
-      '<button class="go" id="commuteGo"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0A0D12" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3L14 21z"/></svg>Avvia tragitto</button>';
-    $('#commuteGo').onclick = () => choose(state.commute.to);
   }
 
   // Diario di bordo
@@ -1121,7 +1050,7 @@ window.addEventListener('unhandledrejection', (e) => {
     state.saved = true;
     $('#saveLabel').textContent = 'Salvato';
     $('#saveLog').disabled = true;
-    setTimeout(() => { reset(); state.sample = null; state.logMonth = null; selectSection(4); }, 900);
+    setTimeout(() => { reset(); state.sample = null; state.logMonth = null; selectSection(2); }, 900);
   };
 
   function reset() {
