@@ -137,7 +137,18 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 .result .cat { color: var(--gold-soft); }
 /* Scheda del luogo */
 /* Categorie con un tocco */
-#catBlock { display: flex; flex-direction: column; gap: 12px; }
+#catBlock { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-bottom: calc(var(--bottom) + 10px); -webkit-overflow-scrolling: touch; }
+#catBlock > * { flex-shrink: 0; }
+#catBlock .chips { justify-content: flex-start; margin: 0 0 6px; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+#catBlock .chips::-webkit-scrollbar { display: none; }
+#catBlock .chip { flex: none; max-width: 190px; color: var(--bone); }
+#catBlock .chip svg { color: var(--gold-light); flex: none; }
+#catBlock .chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.block-head { display: flex; align-items: baseline; justify-content: space-between; margin-top: 10px; }
+.link-btn { background: none; border: 0; padding: 4px 0; color: var(--gold); font-size: 13px; }
+.recent { display: flex; align-items: center; border-bottom: 1px solid #1A2029; }
+.recent .result { border-bottom: 0; flex: 1; min-width: 0; }
+.recent .x { flex: none; width: 36px; height: 36px; background: none; border: 0; color: var(--muted); font-size: 18px; }
 .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .cat-tile { height: 86px; border-radius: 18px; background: rgba(21,27,37,0.9); border: 1px solid #232A35; color: var(--bone); font-size: 13px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 0; }
 .cat-tile svg { color: var(--gold-light); }
@@ -312,8 +323,13 @@ body.deep .deep-badge { display: block; }
       <button id="cancelSearch">Annulla</button>
     </div>
     <div id="catBlock">
+      <div class="chips" id="shortcuts" hidden></div>
       <div class="kicker">Nei dintorni</div>
       <div class="cats" id="cats"></div>
+      <div id="recentBlock" hidden>
+        <div class="block-head"><div class="kicker">Recenti</div><button class="link-btn" id="clearRecents">Cancella tutto</button></div>
+        <div id="recents"></div>
+      </div>
     </div>
     <div class="hint" id="searchHint"></div>
     <div id="results"></div>
@@ -776,6 +792,7 @@ window.addEventListener('unhandledrejection', (e) => {
     map.addLayer({ ...common, id: 'route-wave-glow', source: 'route', paint: { 'line-blur': 14, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 18, 18, 56], 'line-gradient': waveGradient(-1, WAVE.glow), 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
     map.addLayer({ ...common, id: 'route-wave', source: 'route', paint: { 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 5, 18, 18], 'line-gradient': waveGradient(-1, WAVE.core), 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
     addDeepVeil();
+    installDestLight();
     try { const l = map.getLights(); if (l && l.length) standardNightLights = JSON.parse(JSON.stringify(l)); } catch (e) {}
     applyLight();
   });
@@ -1183,7 +1200,7 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 
   // ---------- Ricerca ----------
-  function openSearch() { show('search'); $('#q').value = ''; $('#results').innerHTML = ''; $('#searchHint').textContent = ''; $('#catBlock').hidden = false; setTimeout(() => $('#q').focus(), 50); }
+  function openSearch() { show('search'); $('#q').value = ''; $('#results').innerHTML = ''; $('#searchHint').textContent = ''; $('#catBlock').hidden = false; renderEmptySearch(); setTimeout(() => $('#q').focus(), 50); }
   $('#openSearch').onclick = openSearch;
   $('#cancelSearch').onclick = () => { show('browse'); selectSection(state.section); };
   let searchTimer, searchSeq = 0;
@@ -1191,7 +1208,7 @@ window.addEventListener('unhandledrejection', (e) => {
     clearTimeout(searchTimer);
     const q = $('#q').value.trim();
     $('#catBlock').hidden = q.length >= 2;
-    if (q.length < 2) { searchSeq++; $('#results').innerHTML = ''; $('#searchHint').textContent = ''; return; }
+    if (q.length < 2) { searchSeq++; $('#results').innerHTML = ''; $('#searchHint').textContent = ''; renderEmptySearch(); return; }
     searchTimer = setTimeout(() => search(q), 300);
   });
   // Suggerimenti mentre scrivi (Search Box "suggest") e scheda del luogo ("retrieve").
@@ -1294,6 +1311,267 @@ window.addEventListener('unhandledrejection', (e) => {
       phone: md.phone || null, website: md.website || null, hours: md.open_hours || null,
       distance: typeof sug.distance === 'number' ? sug.distance : dist(state.origin, coord)
     };
+  }
+
+  // ---------- Ricerche recenti e scorciatoie (a campo vuoto) ----------
+  const recentData = () => load('columbus-recent', []);
+  const samePlace = (a, b) => (a.id && b.id && a.id === b.id) || (a.name === b.name && dist(a.coord, b.coord) < 30);
+  function addRecent(pl) {
+    if (!pl || !pl.coord || pl.id === 'home' || pl.id === 'work') return;
+    const keep = { id: pl.id, name: pl.name, address: pl.address, coord: pl.coord, category: pl.category, icon: pl.icon, phone: pl.phone || null, website: pl.website || null, hours: pl.hours || null };
+    store('columbus-recent', [keep].concat(recentData().filter((r) => !samePlace(r, keep))).slice(0, 12));
+  }
+  function renderEmptySearch() {
+    const s = savedData();
+    const chips = [];
+    const pinIcon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">';
+    if (s.home) chips.push(['home', pinIcon + '<path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/></svg>', 'Casa']);
+    if (s.work) chips.push(['work', pinIcon + '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>', 'Lavoro']);
+    s.favorites.slice(0, 6).forEach((f, i) => chips.push(['fav' + i, pinIcon + '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>', f.name]));
+    $('#shortcuts').hidden = !chips.length;
+    $('#shortcuts').innerHTML = chips.map(([k, ic, label]) => '<button class="chip" data-sc="' + k + '">' + ic + '<span>' + esc(label) + '</span></button>').join('');
+    $('#shortcuts').querySelectorAll('[data-sc]').forEach((b) => b.onclick = () => {
+      const k = b.dataset.sc, d = savedData();
+      if (k === 'home' || k === 'work') choose(asDestination(d[k], k));
+      else { const f = d.favorites[Number(k.slice(3))]; if (f) choose(f); }
+    });
+    const rec = recentData();
+    $('#recentBlock').hidden = !rec.length;
+    $('#recents').innerHTML = '';
+    rec.forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'recent';
+      row.innerHTML = '<button class="result"><span class="ic">' + iconSvg(r.icon || 'pin', 17) + '</span><div><b>' + esc(r.name) + '</b><span class="sub">' + esc(r.address || r.category || '') + '</span></div><span class="km">' + fmtKm(dist(state.origin, r.coord)) + '</span></button><button class="x" aria-label="Togli dai recenti">×</button>';
+      row.firstChild.onclick = () => { state.place = Object.assign({}, r, { distance: dist(state.origin, r.coord) }); state.placeFrom = 'search'; showPlace(); };
+      row.lastChild.onclick = () => { const list = recentData(); list.splice(i, 1); store('columbus-recent', list); renderEmptySearch(); };
+      $('#recents').appendChild(row);
+    });
+  }
+  $('#clearRecents').onclick = () => { store('columbus-recent', []); renderEmptySearch(); };
+
+  // ---------- Toccare un luogo sulla mappa ----------
+  // Un'etichetta (negozio, ristorante, monumento…) apre la sua scheda; un edificio senza etichetta
+  // apre la scheda del suo indirizzo.
+  function queryTarget(geom, featuresetId) {
+    try { return map.queryRenderedFeatures(geom, { target: { featuresetId, importId: 'basemap' } }) || []; } catch (e) { return []; }
+  }
+  let tapSeq = 0;
+  map.on('click', async (e) => {
+    if (!['browse', 'place', 'category'].includes(state.phase)) return;
+    if (state.phase === 'browse' && state.section !== 0) return;
+    const box = [[e.point.x - 8, e.point.y - 8], [e.point.x + 8, e.point.y + 8]];
+    const poi = queryTarget(box, 'poi').find((f) => f.properties && f.properties.name);
+    const seq = ++tapSeq;
+    try {
+      let pl = null;
+      if (poi) {
+        const coord = poi.geometry && poi.geometry.type === 'Point' ? poi.geometry.coordinates : [e.lngLat.lng, e.lngLat.lat];
+        toast('Apro ' + poi.properties.name + '…');
+        pl = await placeAt(poi.properties.name, coord, poi.properties);
+      } else if (queryTarget(e.point, 'buildings').length) {
+        toast('Cerco l\'indirizzo…');
+        pl = await addressAt([e.lngLat.lng, e.lngLat.lat]);
+      } else return;
+      if (seq !== tapSeq || !pl) return;
+      $('#toast').classList.remove('show');
+      if (state.phase === 'category') highlightCategoryPin(-1);
+      state.place = pl;
+      state.placeFrom = state.phase === 'category' ? 'category' : 'map';
+      showPlace();
+    } catch (err) { if (seq === tapSeq) toast('Scheda non disponibile (' + err.message + ').'); }
+  });
+  // Dall'etichetta della mappa alla scheda completa: cerco il luogo per nome vicino al punto toccato.
+  async function placeAt(name, coord, props) {
+    const sess = newSession();
+    const q = 'https://api.mapbox.com/search/searchbox/v1/suggest?q=' + encodeURIComponent(name) + '&language=it&limit=5&types=poi&proximity=' + coord.join(',') + '&origin=' + coord.join(',') + '&session_token=' + sess + '&access_token=' + token;
+    let sug = null;
+    try {
+      const res = await fetch(q);
+      if (res.ok) {
+        const list = ((await res.json()).suggestions || []).filter((x) => typeof x.distance === 'number' && x.distance < 150);
+        sug = list.sort((a, b) => a.distance - b.distance)[0] || null;
+      }
+    } catch (e) {}
+    if (sug) {
+      const res = await fetch('https://api.mapbox.com/search/searchbox/v1/retrieve/' + encodeURIComponent(sug.mapbox_id) + '?session_token=' + sess + '&language=it&access_token=' + token);
+      if (res.ok) {
+        const f = ((await res.json()).features || [])[0];
+        if (f) return placeFromFeature(f, { mapbox_id: sug.mapbox_id, name: sug.name, maki: sug.maki });
+      }
+    }
+    // Non trovato nel servizio di ricerca: scheda essenziale con nome e posizione.
+    const cls = props && (props.class || props.group || '');
+    return { id: 'map-' + coord.join(','), name, address: '', coord, category: cls ? String(cls).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) : 'Luogo', icon: iconKey(props && props.maki, 'poi'), phone: null, website: null, hours: null, distance: dist(state.origin, coord) };
+  }
+  async function addressAt(coord) {
+    const res = await fetch('https://api.mapbox.com/search/searchbox/v1/reverse?longitude=' + coord[0] + '&latitude=' + coord[1] + '&types=address&language=it&limit=1&access_token=' + token);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const f = ((await res.json()).features || [])[0];
+    if (!f) throw new Error('nessun indirizzo qui');
+    const pl = placeFromFeature(f);
+    pl.coord = f.geometry.coordinates;
+    pl.category = 'Indirizzo';
+    return pl;
+  }
+
+  // ---------- Luce sulla destinazione ----------
+  // Quando parte la guida, la destinazione si accende: se è un edificio, un contorno di luce
+  // che sale dalle sue pareti; altrimenti una colonna di luce. La luce sale da terra in poco più
+  // di un secondo e perde luminosità, appena appena, salendo. Disegnata con un piccolo shader
+  // (strato "custom" di Mapbox): gradiente continuo, e gli edifici davanti la nascondono.
+  const DEST_LOOK = {
+    building: { bottom: 0.62, top: 0.26, offset: 1.2, edge: 0.9 },
+    column: { bottom: 0.7, top: 0.04, radius: 5, height: 140, edge: 0 }
+  };
+  const destLight = { shape: null, raf: 0, reach: 0, cache: null, coord: null };
+  const destLayer = {
+    id: 'dest-light', type: 'custom', renderingMode: '3d',
+    onAdd(m, gl) {
+      const vs = 'attribute vec3 a_pos; attribute float a_t; uniform mat4 u_matrix; varying float v_t; void main() { v_t = a_t; gl_Position = u_matrix * vec4(a_pos, 1.0); }';
+      const fs = 'precision mediump float; varying float v_t; uniform float u_bottom; uniform float u_top; uniform float u_reach; uniform float u_edge; uniform vec3 u_color;' +
+        'void main() { if (v_t > u_reach) discard; float a = mix(u_bottom, u_top, v_t);' +
+        ' a *= smoothstep(u_reach, u_reach - 0.06, v_t);' +                       // bordo morbido della luce che sale
+        ' a += u_edge * (1.0 - smoothstep(0.0, 0.035, v_t)) * 0.5;' +             // filo più luminoso a terra
+        ' gl_FragColor = vec4(u_color * a, a); }';
+      const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
+      const prog = gl.createProgram();
+      gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(prog);
+      this.prog = prog;
+      this.loc = { pos: gl.getAttribLocation(prog, 'a_pos'), t: gl.getAttribLocation(prog, 'a_t') };
+      this.u = {}; ['u_matrix', 'u_bottom', 'u_top', 'u_reach', 'u_edge', 'u_color'].forEach((n) => { this.u[n] = gl.getUniformLocation(prog, n); });
+      this.buf = gl.createBuffer(); this.count = 0;
+    },
+    setGeometry(gl, data) { gl.bindBuffer(gl.ARRAY_BUFFER, this.buf); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); this.count = data.length / 4; },
+    render(gl, matrix) {
+      const sh = destLight.shape;
+      if (!sh || !this.prog) return;
+      if (sh.dirty) { this.setGeometry(gl, sh.vertices); sh.dirty = false; }
+      if (!this.count || destLight.reach <= 0) return;
+      const L = DEST_LOOK[sh.kind];
+      gl.useProgram(this.prog);
+      const o = sh.origin, sc = o.meterInMercatorCoordinateUnits();
+      const model = [sc, 0, 0, 0, 0, sc, 0, 0, 0, 0, sc, 0, o.x, o.y, 0, 1]; // metri locali → Mercatore
+      gl.uniformMatrix4fv(this.u.u_matrix, false, new Float32Array(mul4(matrix, model)));
+      gl.uniform1f(this.u.u_bottom, L.bottom * (state.deep ? 0.75 : 1));
+      gl.uniform1f(this.u.u_top, L.top * (state.deep ? 0.75 : 1));
+      gl.uniform1f(this.u.u_reach, destLight.reach);
+      gl.uniform1f(this.u.u_edge, L.edge);
+      gl.uniform3f(this.u.u_color, 0.953, 0.835, 0.549); // #F3D58C
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
+      gl.enableVertexAttribArray(this.loc.pos); gl.vertexAttribPointer(this.loc.pos, 3, gl.FLOAT, false, 16, 0);
+      gl.enableVertexAttribArray(this.loc.t); gl.vertexAttribPointer(this.loc.t, 1, gl.FLOAT, false, 16, 12);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(false);
+      gl.disable(gl.CULL_FACE);
+      gl.drawArrays(gl.TRIANGLES, 0, this.count);
+      gl.depthMask(true);
+      gl.disableVertexAttribArray(this.loc.pos); gl.disableVertexAttribArray(this.loc.t);
+    }
+  };
+  function installDestLight() {
+    try { if (!map.getLayer('dest-light')) map.addLayer(Object.assign(destLayer, { slot: 'top' })); }
+    catch (e) { try { if (!map.getLayer('dest-light')) map.addLayer(destLayer); } catch (x) { console.warn('Luce della destinazione non disponibile:', x); } }
+  }
+  const metersToLng = (lat) => 1 / (111320 * Math.cos(lat * toR));
+  const ring = (center, r, n = 32) => { const out = []; for (let i = 0; i <= n; i++) { const a = i / n * 2 * Math.PI; out.push([center[0] + r * Math.cos(a) * metersToLng(center[1]), center[1] + r * Math.sin(a) / 110540]); } return out; };
+  // Sposta il contorno verso l'esterno, lato per lato, così la luce sta appena fuori dalle pareti.
+  function grow(rg, meters) {
+    const lat0 = rg[0][1], kx = 1 / metersToLng(lat0), ky = 110540;
+    const P = rg.slice(0, -1).map(([x, y]) => [x * kx, y * ky]); // metri
+    const n = P.length;
+    let area = 0; for (let i = 0; i < n; i++) { const [x1, y1] = P[i], [x2, y2] = P[(i + 1) % n]; area += x1 * y2 - x2 * y1; }
+    const sgn = area > 0 ? 1 : -1; // antiorario: la normale esterna è a destra del lato
+    const normal = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [sgn * dy / l, -sgn * dx / l]; };
+    const out = P.map((p, i) => {
+      const n1 = normal(P[(i - 1 + n) % n], p), n2 = normal(p, P[(i + 1) % n]);
+      let mx = n1[0] + n2[0], my = n1[1] + n2[1]; const ml = Math.hypot(mx, my) || 1; mx /= ml; my /= ml;
+      const cos = Math.max(0.35, mx * n2[0] + my * n2[1]);
+      return [(p[0] + mx * meters / cos) / kx, (p[1] + my * meters / cos) / ky];
+    });
+    out.push(out[0]);
+    return out;
+  }
+  // Pareti verticali lungo il contorno: per ogni lato due triangoli, con t = 0 a terra e 1 in cima.
+  // Coordinate in metri attorno a un'origine vicina: in precisione singola le coordinate globali
+  // sbaglierebbero di circa un metro.
+  function wallVertices(rg, height, origin) {
+    const s = origin.meterInMercatorCoordinateUnits();
+    const loc = (ll) => { const m = mapboxgl.MercatorCoordinate.fromLngLat(ll, 0); return [(m.x - origin.x) / s, (m.y - origin.y) / s]; };
+    const out = [];
+    for (let i = 0; i < rg.length - 1; i++) {
+      const [ax, ay] = loc(rg[i]), [bx, by] = loc(rg[i + 1]);
+      out.push(ax, ay, 0, 0, bx, by, 0, 0, ax, ay, height, 1, bx, by, 0, 0, bx, by, height, 1, ax, ay, height, 1);
+    }
+    return new Float32Array(out);
+  }
+  function mul4(a, b) { // a × b, matrici 4×4 per colonne
+    const o = new Float64Array(16);
+    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let v = 0; for (let k = 0; k < 4; k++) v += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = v; }
+    return o;
+  }
+  function inRing(pt, rg) {
+    let inside = false;
+    for (let i = 0, j = rg.length - 1; i < rg.length; j = i++) {
+      const [xi, yi] = rg[i], [xj, yj] = rg[j];
+      if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  // Cerca l'edificio della destinazione tra quelli disegnati sulla mappa (serve che sia sullo schermo).
+  function findBuilding(coord) {
+    try { if (!map.getBounds().contains(coord) || map.getZoom() < 14.5) return null; } catch (e) { return null; }
+    const pt = map.project(coord);
+    const feats = queryTarget([[pt.x - 18, pt.y - 18], [pt.x + 18, pt.y + 18]], 'buildings');
+    let best = null;
+    for (const f of feats) {
+      const g = f.geometry; if (!g) continue;
+      const polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : [];
+      for (const poly of polys) {
+        const outer = poly[0]; if (!outer || outer.length < 4) continue;
+        const c = outer.slice(0, -1).reduce((a, p, _, arr) => [a[0] + p[0] / arr.length, a[1] + p[1] / arr.length], [0, 0]);
+        const score = inRing(coord, outer) ? 0 : dist(coord, c);
+        if (score < 35 && (!best || score < best.score)) {
+          const pr = f.properties || {};
+          const h = Number(pr.height || pr.render_height || 0) || 18;
+          best = { score, kind: 'building', ring: outer, height: Math.min(300, Math.max(8, h)) + 1.5 };
+        }
+      }
+    }
+    return best;
+  }
+  function rememberDestBuilding(coord) {
+    const b = findBuilding(coord);
+    if (b) destLight.cache = { coord, shape: b };
+    return b;
+  }
+  function showDestLight(coord) {
+    let sh = destLight.cache && dist(destLight.cache.coord, coord) < 5 ? destLight.cache.shape : findBuilding(coord);
+    if (!sh) sh = { kind: 'column', ring: ring(coord, DEST_LOOK.column.radius), height: DEST_LOOK.column.height };
+    const rg = sh.kind === 'building' ? grow(sh.ring, DEST_LOOK.building.offset) : sh.ring;
+    const origin = mapboxgl.MercatorCoordinate.fromLngLat(coord, 0);
+    destLight.shape = Object.assign({}, sh, { origin, vertices: wallVertices(rg, sh.height, origin), dirty: true });
+    destLight.coord = coord;
+    cancelAnimationFrame(destLight.raf);
+    const t0 = performance.now(), dur = reduceMotion ? 0 : 1300;
+    const step = (now) => {
+      const x = dur ? Math.min(1, (now - t0) / dur) : 1;
+      destLight.reach = 1 - Math.pow(1 - x, 3);
+      map.triggerRepaint();
+      if (x < 1) destLight.raf = requestAnimationFrame(step);
+    };
+    destLight.reach = 0;
+    destLight.raf = requestAnimationFrame(step);
+  }
+  // In guida: se all'inizio non avevamo l'edificio, lo cerchiamo appena la destinazione entra in vista.
+  function upgradeDestLight() {
+    if (!destLight.shape || destLight.shape.kind !== 'column') return;
+    const b = findBuilding(destLight.coord);
+    if (b) { destLight.cache = { coord: destLight.coord, shape: b }; showDestLight(destLight.coord); }
+  }
+  function hideDestLight() {
+    cancelAnimationFrame(destLight.raf);
+    destLight.shape = null; destLight.reach = 0;
+    try { map.triggerRepaint(); } catch (e) {}
   }
 
   // ---------- Categorie con un tocco ----------
@@ -1446,6 +1724,7 @@ window.addEventListener('unhandledrejection', (e) => {
   }
   function showPlace() {
     const pl = state.place;
+    addRecent(pl);
     show('place');
     $('#placeCat').innerHTML = esc(pl.category);
     $('#placeName').textContent = pl.name;
@@ -1461,13 +1740,16 @@ window.addEventListener('unhandledrejection', (e) => {
     requestAnimationFrame(() => {
       const { padding } = freePadding($('#place .head'), $('#place .place-card'));
       map.flyTo({ center: pl.coord, zoom: 16.4, pitch: 60, bearing: map.getBearing(), padding, duration: 1600 });
+      // A volo finito l'edificio è sullo schermo: lo ricordiamo per la luce della destinazione.
+      map.once('moveend', () => { if (state.phase === 'place' && state.place === pl) setTimeout(() => rememberDestBuilding(pl.coord), 300); });
       liftMapControls($('#place .place-card'));
     });
   }
   $('#backPlace').onclick = () => {
     pin.remove();
     if (state.placeFrom === 'category' && state.category) { highlightCategoryPin(-1); showCategory(); }
-    else show('search');
+    else if (state.placeFrom === 'map') { show('browse'); selectSection(0, false); }
+    else { show('search'); if (!$('#q').value.trim()) { $('#catBlock').hidden = false; renderEmptySearch(); } }
   };
   $('#placeRoute').onclick = () => choose(state.place);
   $('#placeSave').onclick = (e) => { e.stopPropagation(); $('#placeMenu').hidden = !$('#placeMenu').hidden; };
@@ -1489,6 +1771,7 @@ window.addEventListener('unhandledrejection', (e) => {
     try {
       state.routes = await fetchRoutes(state.origin, place.coord);
       state.dest = place;
+      addRecent(place);
       state.sel = 0;
       const now = new Date();
       state.glare = {};
@@ -1621,6 +1904,7 @@ window.addEventListener('unhandledrejection', (e) => {
     const p = prepare(r);
     state.saved = false;
     state.sim = { r, p, t: 0, seg: 0, last: performance.now(), startedAt: Date.now(), bearing: bearingOf(p.c[0], p.c[Math.min(1, p.c.length - 1)]), lastDist: '' };
+    showDestLight(state.dest.coord);
     show('nav');
     state.sim.raf = requestAnimationFrame(tick);
   };
@@ -1637,6 +1921,7 @@ window.addEventListener('unhandledrejection', (e) => {
     const pos = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
     if (len > 2) { const diff = ((bearingOf(a, b) - s.bearing + 540) % 360) - 180; s.bearing = (s.bearing + diff * Math.min(1, dt * 2.5) + 360) % 360; }
     puck.setLngLat(pos).setRotation(s.bearing);
+    if (!s.lastLook || now - s.lastLook > 1000) { s.lastLook = now; upgradeDestLight(); }
     map.jumpTo({ center: pos, bearing: s.bearing, pitch: 62, zoom: 17, padding: { top: 330, bottom: 150, left: 0, right: 0 } });
     setTrim(s.t / s.p.total);
     hud(s, pos);
@@ -1703,7 +1988,8 @@ window.addEventListener('unhandledrejection', (e) => {
     $('#arrKicker').textContent = 'Arrivo · ' + fmtHM(new Date());
     $('#arrName').textContent = state.dest.name;
     $('#arrLine').textContent = fmtKm(s.r.distance) + ' in ' + Math.max(1, Math.round(s.r.duration / 60)) + ' minuti.';
-    beacon.setLngLat(state.dest.coord).addTo(map);
+    if (!destLight.shape) beacon.setLngLat(state.dest.coord).addTo(map); // la luce della destinazione fa già da faro
+    setTimeout(upgradeDestLight, 1700);
     stopWave();
     let b = map.getBearing();
     const pad = { top: 0, bottom: 320, left: 0, right: 0 };
@@ -1729,6 +2015,7 @@ window.addEventListener('unhandledrejection', (e) => {
     if (state.orbit) cancelAnimationFrame(state.orbit);
     stopWave();
     clearCategoryPins(); state.category = null;
+    hideDestLight(); destLight.cache = null;
     state.sim = null; state.orbit = null; state.routes = []; state.dest = null; state.trim = 0;
     pin.remove(); beacon.remove();
     $('#starMenu').hidden = true;
