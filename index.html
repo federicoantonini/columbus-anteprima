@@ -361,9 +361,8 @@ body.deep .deep-badge { display: block; }
         <div class="kicker">Tappa 5 · questa versione</div>
         <b>Notte profonda</b>
         <ul>
-          <li>La notte con circa un terzo della luce naturale</li>
-          <li>Edifici 3D con finestre accese in oro caldo e luce dal basso sulle facciate</li>
-          <li>Nomi di vie e quartieri visibili; nascoste le icone colorate di negozi e trasporti</li>
+          <li>La notte di Mapbox con gli edifici appena più scuri</li>
+          <li>Terreno, parchi e acqua velati di scuro; le strade restano luminose</li>
           <li>Filo d'oro e testi in oro attenuato</li>
         </ul>
       </div>
@@ -604,7 +603,7 @@ window.addEventListener('unhandledrejection', (e) => {
     map.addLayer({ ...common, id: 'route-core', source: 'route', paint: { 'line-color': '#E9C46A', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 5, 18, 18], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
     map.addLayer({ ...common, id: 'route-light', source: 'route', paint: { 'line-color': '#FFF4D6', 'line-opacity': 0.85, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.2, 18, 5], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
     map.addLayer({ ...common, id: 'route-flow', source: 'route', paint: { 'line-color': '#FFFFFF', 'line-opacity': 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 2, 18, 7], 'line-dasharray': DASHES[0], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
-    addNightBuildings();
+    addDeepVeil();
     let step = 0;
     setInterval(() => { step = (step + 1) % DASHES.length; if (map.getLayer('route-flow')) map.setPaintProperty('route-flow', 'line-dasharray', DASHES[step]); }, 60);
     try { const l = map.getLights(); if (l && l.length) standardNightLights = JSON.parse(JSON.stringify(l)); } catch (e) {}
@@ -640,9 +639,9 @@ window.addEventListener('unhandledrejection', (e) => {
       { id: 'columbus-sun', type: 'directional', properties: { color: L.sun, intensity: L.sunI, direction: [+az.toFixed(1), +polar.toFixed(1)], 'cast-shadows': true, 'shadow-intensity': +(0.4 + 0.6 * k).toFixed(3) } }
     ];
   }
-  // Notte profonda: la notte di Mapbox con circa un terzo della luce naturale,
-  // edifici 3D nostri con finestre accese, niente icone colorate.
-  const DEEP_DIM = 0.35;
+  // Notte profonda: la notte di Mapbox, con gli edifici appena più scuri (luci -15%)
+  // e tutto il resto, tranne le strade, velato di scuro.
+  const DEEP_DIM = 0.85;
   function deepLights() {
     if (!standardNightLights) return null;
     return standardNightLights.map((l) => {
@@ -652,42 +651,13 @@ window.addEventListener('unhandledrejection', (e) => {
       return c;
     });
   }
-  let hide3dKey = null; // quale opzione di Mapbox nasconde i suoi edifici (scelta al primo uso)
-  // Facciata scura 64×64 con una griglia di finestre: alcune accese in oro caldo, con un leggero alone.
-  function windowPattern(seed) {
-    const S = 64, c = document.createElement('canvas');
-    c.width = c.height = S;
-    const g = c.getContext('2d');
-    g.fillStyle = '#0a0d13'; g.fillRect(0, 0, S, S);
-    for (let row = 0; row < 4; row++) for (let col = 0; col < 4; col++) {
-      const r = Math.abs(Math.sin((seed * 97 + row * 13 + col * 7 + 1) * 12.9898) * 43758.5453) % 1;
-      const x = col * 16 + 5, y = row * 16 + 4;
-      if (r < 0.18) { // circa una finestra su sei accesa
-        g.fillStyle = 'rgba(240,184,96,0.22)'; g.fillRect(x - 2, y - 2, 10, 13);
-        g.fillStyle = r < 0.05 ? '#ffe4a8' : '#efb35a'; g.fillRect(x, y, 6, 9);
-      } else {
-        g.fillStyle = '#131823'; g.fillRect(x, y, 6, 9);
-      }
-    }
-    return g.getImageData(0, 0, S, S);
-  }
-  function addNightBuildings() {
+  // Velo scuro sopra terreno, parchi e acqua ma sotto strade ed edifici (slot "bottom" di Mapbox Standard).
+  const DEEP_VEIL = 0.28;
+  function addDeepVeil() {
     try {
-      for (let i = 0; i < 3; i++) if (!map.hasImage('columbus-win-' + i)) map.addImage('columbus-win-' + i, windowPattern(i + 1));
-      if (!map.getSource('columbus-buildings')) map.addSource('columbus-buildings', { type: 'vector', url: 'mapbox://mapbox.mapbox-streets-v8' });
-      const base = { type: 'fill-extrusion', source: 'columbus-buildings', 'source-layer': 'building', minzoom: 14, slot: 'middle', filter: ['==', ['get', 'extrude'], 'true'], layout: { visibility: 'none' } };
-      map.addLayer({ ...base, id: 'columbus-bldg', paint: {
-        'fill-extrusion-pattern': ['match', ['%', ['to-number', ['id'], 0], 3], 0, 'columbus-win-0', 1, 'columbus-win-1', 'columbus-win-2'],
-        'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'min_height'],
-        'fill-extrusion-vertical-gradient': false, 'fill-extrusion-emissive-strength': 0.9,
-        'fill-extrusion-flood-light-color': '#f0b860', 'fill-extrusion-flood-light-intensity': 0.22, 'fill-extrusion-flood-light-wall-radius': 5
-      } }, 'alt-line');
-      map.addLayer({ ...base, id: 'columbus-roof', paint: {
-        'fill-extrusion-color': '#0d1118',
-        'fill-extrusion-height': ['+', ['get', 'height'], 0.3], 'fill-extrusion-base': ['max', ['-', ['get', 'height'], 0.2], 0],
-        'fill-extrusion-emissive-strength': 0.6
-      } }, 'alt-line');
-    } catch (e) { console.warn('Edifici notturni non disponibili:', e); }
+      if (!map.getSource('columbus-veil')) map.addSource('columbus-veil', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]]] } } });
+      if (!map.getLayer('columbus-veil')) map.addLayer({ id: 'columbus-veil', type: 'fill', source: 'columbus-veil', slot: 'bottom', layout: { visibility: 'none' }, paint: { 'fill-color': '#000000', 'fill-opacity': DEEP_VEIL, 'fill-emissive-strength': 1 } });
+    } catch (e) { console.warn('Velo notturno non disponibile:', e); }
   }
   function setBasemap(key, value) { try { map.setConfigProperty('basemap', key, value); } catch (e) {} }
   function applyRouteStyle() {
@@ -703,18 +673,7 @@ window.addEventListener('unhandledrejection', (e) => {
     const deep = state.lightMode === 'deep';
     document.body.classList.toggle('deep', deep);
     const p = deep ? 'night' : state.lightMode === 'auto' ? presetFor(new Date(), state.origin) : state.lightMode;
-    setBasemap('showPointOfInterestLabels', !deep);
-    setBasemap('showTransitLabels', !deep);
-    // I nostri edifici con le finestre sostituiscono quelli di Mapbox (altrimenti si sovrappongono).
-    // Se lo stile permette di nascondere solo gli edifici, alberi e monumenti restano.
-    if (deep && !hide3dKey) {
-      setBasemap('show3dBuildings', false);
-      let ok = false;
-      try { ok = map.getConfigProperty('basemap', 'show3dBuildings') === false; } catch (e) {}
-      hide3dKey = ok ? 'show3dBuildings' : 'show3dObjects';
-    }
-    if (hide3dKey) setBasemap(hide3dKey, !deep);
-    ['columbus-bldg', 'columbus-roof'].forEach((id) => { try { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', deep ? 'visible' : 'none'); } catch (e) {} });
+    try { if (map.getLayer('columbus-veil')) map.setLayoutProperty('columbus-veil', 'visibility', deep ? 'visible' : 'none'); } catch (e) {}
     applyRouteStyle();
     document.querySelectorAll('[data-light]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.light === state.lightMode)));
     try { map.setConfigProperty('basemap', 'lightPreset', p); } catch (e) {}
