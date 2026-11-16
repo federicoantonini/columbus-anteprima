@@ -132,6 +132,23 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 .result b { display: block; font-weight: 500; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .result small { display: block; font-size: 13px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .result div { min-width: 0; flex: 1; }
+.result .km { flex: none; font-size: 13px; color: var(--secondary); font-variant-numeric: tabular-nums; }
+.result .sub { display: block; font-size: 13px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result .cat { color: var(--gold-soft); }
+/* Scheda del luogo */
+#place .head { justify-content: space-between; }
+.place-card { margin: 0 12px calc(var(--bottom) + 6px); padding: 22px 20px 18px; border-radius: 26px; background: rgba(10,13,19,0.96); border: 1px solid rgba(233,196,106,0.38); box-shadow: 0 -10px 40px rgba(0,0,0,0.55); display: flex; flex-direction: column; gap: 8px; }
+.place-card h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 500; font-size: 32px; line-height: 1.08; }
+.place-card .addr { margin: 0; font-size: 14px; color: var(--secondary); line-height: 1.4; }
+.place-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 4px; font-size: 14px; }
+.place-meta .open { display: inline-flex; align-items: center; gap: 7px; }
+.place-meta .open i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.place-actions { display: flex; gap: 8px; margin-top: 10px; }
+.place-actions .go { flex: 1; min-width: 0; height: 52px; padding: 0 12px; }
+.pa { flex: none; width: 56px; height: 52px; padding: 0; border-radius: 18px; background: rgba(21,27,37,0.95); border: 1px solid #2A313C; color: var(--bone); font-size: 11px; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+.pa svg { color: var(--gold-light); }
+.pa[aria-disabled="true"] { opacity: .35; pointer-events: none; }
+#placeMenu { top: auto; bottom: calc(var(--bottom) + 96px); right: 24px; }
 .hint { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--secondary); }
 
 /* Anteprima */
@@ -302,6 +319,31 @@ body.deep .deep-badge { display: block; }
     </div>
   </section>
 
+  <!-- Scheda del luogo -->
+  <section id="place" class="screen" hidden>
+    <div class="head">
+      <button class="round" id="backPlace" aria-label="Torna ai risultati"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+    </div>
+    <div class="spacer"></div>
+    <div class="place-card">
+      <div class="kicker" id="placeCat"></div>
+      <h1 id="placeName"></h1>
+      <p class="addr" id="placeAddr"></p>
+      <div class="place-meta"><span id="placeDist"></span><span class="open" id="placeHours"></span></div>
+      <div class="place-actions">
+        <button class="go" id="placeRoute"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0A0D12" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3L14 21z"/></svg>Percorso</button>
+        <button class="pa" id="placeSave" aria-label="Salva"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>Salva</button>
+        <a class="pa" id="placeCall" aria-label="Chiama"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg>Chiama</a>
+        <a class="pa" id="placeSite" target="_blank" rel="noopener" aria-label="Sito web"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>Sito</a>
+      </div>
+    </div>
+    <div class="menu" id="placeMenu" hidden>
+      <button data-place-save="home">⌂&nbsp; Imposta come Casa</button>
+      <button data-place-save="work">▣&nbsp; Imposta come Lavoro</button>
+      <button data-place-save="favorite">☆&nbsp; Aggiungi ai preferiti</button>
+    </div>
+  </section>
+
   <!-- Guida -->
   <section id="nav" class="screen" hidden>
     <div class="deep-badge">☾ NOTTE FONDA</div>
@@ -342,7 +384,26 @@ body.deep .deep-badge { display: block; }
     <header><h2>Tappe di sviluppo</h2><button class="close" data-close>Chiudi</button></header>
     <div class="scroll">
       <div class="stage-item">
-        <div class="kicker">Tappa 5 · questa versione</div>
+        <div class="kicker">Prossimi passi</div>
+        <b>Ricerca dei luoghi, seconda parte</b>
+        <ul>
+          <li>Categorie con un tocco (Benzina, Ricarica, Parcheggi, Ristoranti, Caffè, Farmacie)</li>
+          <li>Ricerche recenti e scorciatoie a campo vuoto</li>
+          <li>Toccare un luogo direttamente sulla mappa per aprirne la scheda</li>
+          <li>Ricerca lungo il percorso durante la guida</li>
+        </ul>
+      </div>
+      <div class="stage-item">
+        <div class="kicker">Tappa 6 · questa versione</div>
+        <b>Ricerca dei luoghi</b>
+        <ul>
+          <li>Suggerimenti mentre scrivi, con icona della categoria e distanza da te</li>
+          <li>Scheda del luogo: categoria, indirizzo, distanza, orari ("aperto · chiude alle…")</li>
+          <li>Pulsanti Percorso, Salva, Chiama, Sito</li>
+        </ul>
+      </div>
+      <div class="stage-item">
+        <div class="kicker">Tappa 5</div>
         <b>Notte fonda automatica</b>
         <ul>
           <li>La notte diventa notte fonda da sola: dalle 21 alle 23 gradualmente, piena fino alle 4, poi torna gradualmente</li>
@@ -350,6 +411,7 @@ body.deep .deep-badge { display: block; }
           <li>Per provarla di giorno: aggiungi ?ora=23:30 all'indirizzo</li>
           <li>Apertura pulita dall'ultima posizione nota, senza salti; niente più richiesta di orientamento</li>
         </ul>
+        <a href="tappa-5/">Apri la versione della tappa 5 →</a>
       </div>
       <div class="stage-item">
         <div class="kicker">Tappa 4</div>
@@ -491,7 +553,7 @@ window.addEventListener('unhandledrejection', (e) => {
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3600); }
   function show(phase) {
     state.phase = phase;
-    for (const id of ['browse', 'search', 'preview', 'nav', 'arrival']) $('#' + id).hidden = id !== phase;
+    for (const id of ['browse', 'search', 'place', 'preview', 'nav', 'arrival']) $('#' + id).hidden = id !== phase;
     document.body.dataset.phase = phase;
   }
   document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => { b.closest('.overlay').hidden = true; });
@@ -1012,25 +1074,138 @@ window.addEventListener('unhandledrejection', (e) => {
     if (q.length < 2) { $('#results').innerHTML = ''; $('#searchHint').textContent = ''; return; }
     searchTimer = setTimeout(() => search(q), 300);
   });
+  // Suggerimenti mentre scrivi (Search Box "suggest") e scheda del luogo ("retrieve").
+  // Suggerimenti e apertura della scheda condividono una "sessione": una sola sessione per ricerca.
+  const newSession = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+  let searchSession = newSession();
+  const PLACE_ICONS = {
+    restaurant: '<path d="M7 3v8M5 3v4a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 2-3 5-3 8h3v10"/>',
+    cafe: '<path d="M4 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6zM17 10h2a2 2 0 0 1 0 4h-2"/>',
+    bar: '<path d="M6 4h12l-6 8zM12 12v7M8 21h8"/>',
+    fuel: '<path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M4 10h10M14 8l4 3v7a2 2 0 0 0 4 0V9l-3-3"/>',
+    parking: '<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M10 17V7h3a3 3 0 0 1 0 6h-3"/>',
+    charging: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+    shop: '<path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2"/>',
+    health: '<path d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/>',
+    lodging: '<path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.5"/>',
+    culture: '<path d="M3 10 12 4l9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/>',
+    park: '<path d="M12 3 6 13h4l-3 5h10l-3-5h4zM12 18v3"/>',
+    transit: '<rect x="6" y="3" width="12" height="14" rx="3"/><path d="M6 10h12M9 21l2-4M15 21l-2-4"/>',
+    pin: '<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>'
+  };
+  function iconKey(maki, type) {
+    const m = String(maki || '');
+    if (/restaurant|fast-food|pizza|noodle/.test(m)) return 'restaurant';
+    if (/cafe|bakery|ice-cream/.test(m)) return 'cafe';
+    if (/bar|beer|wine|alcohol/.test(m)) return 'bar';
+    if (/fuel/.test(m)) return 'fuel';
+    if (/parking|car-rental/.test(m)) return 'parking';
+    if (/charging/.test(m)) return 'charging';
+    if (/shop|grocery|store|clothing|convenience|mall/.test(m)) return 'shop';
+    if (/pharmacy|hospital|doctor|dentist|veterinary/.test(m)) return 'health';
+    if (/lodging/.test(m)) return 'lodging';
+    if (/museum|monument|town-hall|religious|theatre|cinema|art|castle|library/.test(m)) return 'culture';
+    if (/park|garden|playground|zoo/.test(m)) return 'park';
+    if (/rail|bus|metro|ferry|airport|airfield/.test(m)) return 'transit';
+    return 'pin';
+  }
+  const iconSvg = (key, size) => '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (PLACE_ICONS[key] || PLACE_ICONS.pin) + '</svg>';
+  function categoryLabel(pr) {
+    const cats = pr.poi_category || [];
+    if (cats.length) return cats[0].charAt(0).toUpperCase() + cats[0].slice(1);
+    return ({ address: 'Indirizzo', street: 'Via', neighborhood: 'Quartiere', locality: 'Località', place: 'Città', postcode: 'CAP', district: 'Zona', region: 'Regione', country: 'Paese' })[pr.feature_type] || 'Luogo';
+  }
   async function search(q) {
     const seq = ++searchSeq;
     try {
-      const res = await fetch('https://api.mapbox.com/search/searchbox/v1/forward?q=' + encodeURIComponent(q) + '&language=it&limit=8&proximity=' + state.origin.join(',') + '&access_token=' + token);
+      const url = 'https://api.mapbox.com/search/searchbox/v1/suggest?q=' + encodeURIComponent(q) + '&language=it&limit=8&proximity=' + state.origin.join(',') + '&origin=' + state.origin.join(',') + '&session_token=' + searchSession + '&access_token=' + token;
+      const res = await fetch(url);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       if (seq !== searchSeq) return;
-      const places = (data.features || []).map((f) => ({ id: f.properties.mapbox_id, name: f.properties.name || f.properties.full_address || 'Luogo', address: f.properties.full_address || f.properties.place_formatted || '', coord: f.geometry.coordinates }));
-      $('#searchHint').textContent = places.length ? '' : 'Nessun risultato';
+      // Le voci "categoria" e "marchio" non sono luoghi singoli: arriveranno con la ricerca per categorie.
+      const list = (data.suggestions || []).filter((x) => x.feature_type !== 'category' && x.feature_type !== 'brand');
+      $('#searchHint').textContent = list.length ? '' : 'Nessun risultato';
       $('#results').innerHTML = '';
-      places.forEach((p) => {
+      list.forEach((sug) => {
         const b = document.createElement('button');
         b.className = 'result';
-        b.innerHTML = '<span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span><div><b>' + esc(p.name) + '</b><small>' + esc(p.address) + '</small></div>';
-        b.onclick = () => choose(p);
+        const cat = categoryLabel(sug);
+        const addr = sug.full_address || sug.address || sug.place_formatted || '';
+        b.innerHTML = '<span class="ic">' + iconSvg(iconKey(sug.maki, sug.feature_type), 17) + '</span><div><b>' + esc(sug.name) + '</b><span class="sub"><span class="cat">' + esc(cat) + '</span>' + (addr ? ' · ' + esc(addr) : '') + '</span></div>' + (typeof sug.distance === 'number' ? '<span class="km">' + fmtKm(sug.distance) + '</span>' : '');
+        b.onclick = () => openPlace(sug);
         $('#results').appendChild(b);
       });
     } catch (e) { $('#searchHint').textContent = 'Ricerca non riuscita (' + e.message + ').'; }
   }
+
+  // ---------- Scheda del luogo ----------
+  async function openPlace(sug) {
+    $('#searchHint').textContent = 'Apro la scheda…';
+    try {
+      const res = await fetch('https://api.mapbox.com/search/searchbox/v1/retrieve/' + encodeURIComponent(sug.mapbox_id) + '?session_token=' + searchSession + '&language=it&access_token=' + token);
+      searchSession = newSession(); // la sessione si chiude con l'apertura della scheda
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const f = data.features && data.features[0];
+      if (!f) throw new Error('luogo non trovato');
+      const pr = f.properties || {}, md = pr.metadata || {};
+      const coord = f.geometry.coordinates;
+      state.place = {
+        id: pr.mapbox_id || sug.mapbox_id, name: pr.name || sug.name,
+        address: pr.full_address || pr.place_formatted || sug.full_address || '',
+        coord, category: categoryLabel(pr), icon: iconKey(pr.maki || sug.maki, pr.feature_type),
+        phone: md.phone || null, website: md.website || null, hours: md.open_hours || null,
+        distance: typeof sug.distance === 'number' ? sug.distance : dist(state.origin, coord)
+      };
+      $('#searchHint').textContent = '';
+      showPlace();
+    } catch (e) { $('#searchHint').textContent = 'Scheda non disponibile (' + e.message + ').'; }
+  }
+  // Orari di apertura (formato Search Box: periodi con giorno 0 = domenica e ora "HHMM").
+  function openStatus(h) {
+    if (!h || !Array.isArray(h.periods) || !h.periods.length) return null;
+    const W = 7 * 1440, d = new Date();
+    const nowW = d.getDay() * 1440 + d.getHours() * 60 + d.getMinutes();
+    const toMin = (t) => parseInt(String(t).slice(0, 2), 10) * 60 + parseInt(String(t).slice(2, 4), 10);
+    if (h.periods.length === 1 && h.periods[0].open && !h.periods[0].close) return { open: true, text: 'Aperto 24 ore' };
+    const iv = h.periods.filter((p) => p.open).map((p) => {
+      const s = p.open.day * 1440 + toMin(p.open.time);
+      let e = p.close ? p.close.day * 1440 + toMin(p.close.time) : s + 1440;
+      if (e <= s) e += W;
+      return [s, e];
+    });
+    const hm = (w) => { const m = ((w % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+    for (const [s, e] of iv) for (const off of [0, -W]) if (nowW >= s + off && nowW < e + off) return { open: true, text: 'Aperto · chiude alle ' + hm(e) };
+    let next = Infinity;
+    for (const [s] of iv) for (const off of [0, W]) if (s + off > nowW && s + off < next) next = s + off;
+    if (next === Infinity) return { open: false, text: 'Chiuso' };
+    const days = Math.floor(next / 1440) - Math.floor(nowW / 1440);
+    const names = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+    const when = days === 0 ? 'alle ' : days === 1 ? 'domani alle ' : names[Math.floor(next / 1440) % 7] + ' alle ';
+    return { open: false, text: 'Chiuso · apre ' + when + hm(next) };
+  }
+  function showPlace() {
+    const pl = state.place;
+    show('place');
+    $('#placeCat').innerHTML = esc(pl.category);
+    $('#placeName').textContent = pl.name;
+    $('#placeAddr').textContent = pl.address;
+    $('#placeDist').textContent = fmtKm(pl.distance) + ' da te';
+    const st = openStatus(pl.hours);
+    $('#placeHours').innerHTML = st ? '<i style="background:' + (st.open ? 'var(--green)' : 'var(--red)') + '"></i>' + esc(st.text) : '';
+    const call = $('#placeCall'), site = $('#placeSite');
+    if (pl.phone) { call.href = 'tel:' + String(pl.phone).replace(/[^\d+]/g, ''); call.removeAttribute('aria-disabled'); } else { call.removeAttribute('href'); call.setAttribute('aria-disabled', 'true'); }
+    if (pl.website) { site.href = pl.website; site.removeAttribute('aria-disabled'); } else { site.removeAttribute('href'); site.setAttribute('aria-disabled', 'true'); }
+    $('#placeMenu').hidden = true;
+    pin.setLngLat(pl.coord).addTo(map);
+    map.flyTo({ center: pl.coord, zoom: 16.4, pitch: 60, bearing: map.getBearing(), padding: { top: 80, bottom: 360, left: 0, right: 0 }, duration: 1600 });
+  }
+  $('#backPlace').onclick = () => { pin.remove(); show('search'); };
+  $('#placeRoute').onclick = () => choose(state.place);
+  $('#placeSave').onclick = (e) => { e.stopPropagation(); $('#placeMenu').hidden = !$('#placeMenu').hidden; };
+  document.querySelectorAll('[data-place-save]').forEach((b) => b.onclick = () => { savePlace(state.place, b.dataset.placeSave); $('#placeMenu').hidden = true; });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#placeMenu') && !e.target.closest('#placeSave')) $('#placeMenu').hidden = true; });
 
   // ---------- Percorsi ----------
   async function fetchRoutes(from, to) {
@@ -1043,6 +1218,7 @@ window.addEventListener('unhandledrejection', (e) => {
   async function choose(place) {
     if (state.phase === 'search') $('#searchHint').textContent = 'Traccio la rotta…';
     else toast('Traccio la rotta…');
+    if (state.phase === 'place') $('#placeRoute').disabled = true;
     try {
       state.routes = await fetchRoutes(state.origin, place.coord);
       state.dest = place;
@@ -1050,8 +1226,10 @@ window.addEventListener('unhandledrejection', (e) => {
       const now = new Date();
       state.glare = {};
       state.routes.forEach((r, i) => { const g = analyzeGlare(r, now); if (g) state.glare[i] = g; });
+      $('#placeRoute').disabled = false;
       openPreview();
     } catch (e) {
+      $('#placeRoute').disabled = false;
       if (state.phase === 'search') $('#searchHint').textContent = 'Percorso non disponibile (' + e.message + ').';
       else toast('Percorso non disponibile (' + e.message + ').');
     }
