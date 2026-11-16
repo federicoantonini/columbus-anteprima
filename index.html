@@ -136,6 +136,22 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 .result .sub { display: block; font-size: 13px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .result .cat { color: var(--gold-soft); }
 /* Scheda del luogo */
+/* Categorie con un tocco */
+#catBlock { display: flex; flex-direction: column; gap: 12px; }
+.cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cat-tile { height: 86px; border-radius: 18px; background: rgba(21,27,37,0.9); border: 1px solid #232A35; color: var(--bone); font-size: 13px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 0; }
+.cat-tile svg { color: var(--gold-light); }
+.cat-tile:active { border-color: rgba(243,213,140,0.7); background: rgba(233,196,106,0.1); }
+.result.catrow .ic { background: rgba(233,196,106,0.12); border: 1px solid rgba(233,196,106,0.4); }
+.cat-sheet { margin: 0 12px calc(var(--bottom) + 6px); max-height: 42%; display: flex; flex-direction: column; border-radius: 26px; background: rgba(10,13,19,0.96); border: 1px solid rgba(233,196,106,0.38); box-shadow: 0 -10px 40px rgba(0,0,0,0.55); overflow: hidden; }
+.cat-sheet .list { overflow-y: auto; padding: 6px 18px 8px; -webkit-overflow-scrolling: touch; }
+.cat-sheet .result:last-child { border-bottom: 0; }
+.cat-sheet .hint { padding: 18px 0; text-align: center; }
+.result .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--secondary); margin-top: 2px; }
+.result .status i { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.cat-pin-wrap { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; }
+.cat-pin { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 1px solid #FFF4D6; color: #0A0D12; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 35% 30%, #FFF1CC, #E9C46A 55%, #B98F3E); box-shadow: 0 0 0 4px rgba(243,213,140,0.16), 0 4px 12px rgba(0,0,0,0.55); transition: transform .2s ease, box-shadow .2s ease; }
+.cat-pin.sel { transform: scale(1.22); box-shadow: 0 0 0 6px rgba(243,213,140,0.28), 0 0 24px rgba(243,213,140,0.6); }
 #place .head { justify-content: space-between; }
 .place-card { margin: 0 12px calc(var(--bottom) + 6px); padding: 22px 20px 18px; border-radius: 26px; background: rgba(10,13,19,0.96); border: 1px solid rgba(233,196,106,0.38); box-shadow: 0 -10px 40px rgba(0,0,0,0.55); display: flex; flex-direction: column; gap: 8px; }
 .place-card h1 { margin: 2px 0 0; font-family: var(--serif); font-weight: 500; font-size: 32px; line-height: 1.08; }
@@ -295,8 +311,22 @@ body.deep .deep-badge { display: block; }
       <input id="q" placeholder="Dove si va?" autocomplete="off">
       <button id="cancelSearch">Annulla</button>
     </div>
+    <div id="catBlock">
+      <div class="kicker">Nei dintorni</div>
+      <div class="cats" id="cats"></div>
+    </div>
     <div class="hint" id="searchHint"></div>
     <div id="results"></div>
+  </section>
+
+  <!-- Categoria: segnaposto dorati sulla mappa e elenco -->
+  <section id="category" class="screen" hidden>
+    <div class="head">
+      <button class="round" id="backCategory" aria-label="Torna alla ricerca"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+      <div><h1 id="catTitle"></h1><p id="catSub"></p></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="cat-sheet"><div class="list" id="catList"></div></div>
   </section>
 
   <!-- Anteprima -->
@@ -553,8 +583,8 @@ window.addEventListener('unhandledrejection', (e) => {
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3600); }
   function show(phase) {
     state.phase = phase;
-    for (const id of ['browse', 'search', 'place', 'preview', 'nav', 'arrival']) $('#' + id).hidden = id !== phase;
-    if (typeof liftMapControls === 'function' && phase !== 'preview' && phase !== 'place') liftMapControls(null);
+    for (const id of ['browse', 'search', 'category', 'place', 'preview', 'nav', 'arrival']) $('#' + id).hidden = id !== phase;
+    if (typeof liftMapControls === 'function' && phase !== 'preview' && phase !== 'place' && phase !== 'category') liftMapControls(null);
     document.body.dataset.phase = phase;
   }
   document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => { b.closest('.overlay').hidden = true; });
@@ -1153,14 +1183,15 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 
   // ---------- Ricerca ----------
-  function openSearch() { show('search'); $('#q').value = ''; $('#results').innerHTML = ''; $('#searchHint').textContent = ''; setTimeout(() => $('#q').focus(), 50); }
+  function openSearch() { show('search'); $('#q').value = ''; $('#results').innerHTML = ''; $('#searchHint').textContent = ''; $('#catBlock').hidden = false; setTimeout(() => $('#q').focus(), 50); }
   $('#openSearch').onclick = openSearch;
   $('#cancelSearch').onclick = () => { show('browse'); selectSection(state.section); };
   let searchTimer, searchSeq = 0;
   $('#q').addEventListener('input', () => {
     clearTimeout(searchTimer);
     const q = $('#q').value.trim();
-    if (q.length < 2) { $('#results').innerHTML = ''; $('#searchHint').textContent = ''; return; }
+    $('#catBlock').hidden = q.length >= 2;
+    if (q.length < 2) { searchSeq++; $('#results').innerHTML = ''; $('#searchHint').textContent = ''; return; }
     searchTimer = setTimeout(() => search(q), 300);
   });
   // Suggerimenti mentre scrivi (Search Box "suggest") e scheda del luogo ("retrieve").
@@ -1214,8 +1245,17 @@ window.addEventListener('unhandledrejection', (e) => {
       if (seq !== searchSeq) return;
       // Le voci "categoria" e "marchio" non sono luoghi singoli: arriveranno con la ricerca per categorie.
       const list = (data.suggestions || []).filter((x) => x.feature_type !== 'category' && x.feature_type !== 'brand');
-      $('#searchHint').textContent = list.length ? '' : 'Nessun risultato';
+      const cat = matchCategory(q);
+      $('#searchHint').textContent = list.length || cat ? '' : 'Nessun risultato';
       $('#results').innerHTML = '';
+      if (cat) {
+        // Hai scritto una categoria ("benzina", "farmacia"…): prima proponiamo quella.
+        const b = document.createElement('button');
+        b.className = 'result catrow';
+        b.innerHTML = '<span class="ic">' + iconSvg(cat.icon, 17) + '</span><div><b>' + esc(cat.title) + '</b><span class="sub"><span class="cat">Categoria</span> · nei dintorni</span></div>';
+        b.onclick = () => openCategory(cat);
+        $('#results').appendChild(b);
+      }
       list.forEach((sug) => {
         const b = document.createElement('button');
         b.className = 'result';
@@ -1238,19 +1278,149 @@ window.addEventListener('unhandledrejection', (e) => {
       const data = await res.json();
       const f = data.features && data.features[0];
       if (!f) throw new Error('luogo non trovato');
-      const pr = f.properties || {}, md = pr.metadata || {};
-      const coord = f.geometry.coordinates;
-      state.place = {
-        id: pr.mapbox_id || sug.mapbox_id, name: pr.name || sug.name,
-        address: pr.full_address || pr.place_formatted || sug.full_address || '',
-        coord, category: categoryLabel(pr), icon: iconKey(pr.maki || sug.maki, pr.feature_type),
-        phone: md.phone || null, website: md.website || null, hours: md.open_hours || null,
-        distance: typeof sug.distance === 'number' ? sug.distance : dist(state.origin, coord)
-      };
+      state.place = placeFromFeature(f, sug);
+      state.placeFrom = 'search';
       $('#searchHint').textContent = '';
       showPlace();
     } catch (e) { $('#searchHint').textContent = 'Scheda non disponibile (' + e.message + ').'; }
   }
+  function placeFromFeature(f, sug = {}) {
+    const pr = f.properties || {}, md = pr.metadata || {};
+    const coord = f.geometry.coordinates;
+    return {
+      id: pr.mapbox_id || sug.mapbox_id, name: pr.name || sug.name || 'Luogo',
+      address: pr.full_address || pr.place_formatted || sug.full_address || '',
+      coord, category: categoryLabel(pr), icon: iconKey(pr.maki || sug.maki, pr.feature_type),
+      phone: md.phone || null, website: md.website || null, hours: md.open_hours || null,
+      distance: typeof sug.distance === 'number' ? sug.distance : dist(state.origin, coord)
+    };
+  }
+
+  // ---------- Categorie con un tocco ----------
+  // Ogni voce prova più nomi di categoria Mapbox, nell'ordine: vale il primo che il servizio conosce.
+  const CATEGORIES = [
+    { key: 'fuel', label: 'Benzina', title: 'Benzinai', icon: 'fuel', ids: ['gas_station', 'fuel'], words: ['benzina', 'benzinaio', 'benzinai', 'carburante', 'distributore', 'diesel', 'gasolio', 'rifornimento', 'gpl', 'metano'] },
+    { key: 'charging', label: 'Ricarica', title: 'Ricarica elettrica', icon: 'charging', ids: ['charging_station', 'ev_charging_station', 'electric_vehicle_charging_station'], words: ['ricarica', 'colonnina', 'colonnine', 'ricarica elettrica'] },
+    { key: 'parking', label: 'Parcheggi', title: 'Parcheggi', icon: 'parking', ids: ['parking_lot', 'parking', 'parking_garage'], words: ['parcheggio', 'parcheggi', 'garage', 'autorimessa', 'posteggio'] },
+    { key: 'restaurant', label: 'Ristoranti', title: 'Ristoranti', icon: 'restaurant', ids: ['restaurant'], words: ['ristorante', 'ristoranti', 'trattoria', 'osteria', 'pizzeria', 'mangiare', 'cena', 'pranzo'] },
+    { key: 'cafe', label: 'Caffè', title: 'Caffè e bar', icon: 'cafe', ids: ['cafe', 'coffee', 'coffee_shop'], words: ['caffè', 'caffe', 'bar', 'colazione', 'cappuccino'] },
+    { key: 'pharmacy', label: 'Farmacie', title: 'Farmacie', icon: 'health', ids: ['pharmacy', 'drugstore'], words: ['farmacia', 'farmacie'] }
+  ];
+  const fold = (t) => String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  function matchCategory(q) {
+    const n = fold(q);
+    if (n.length < 3) return null;
+    return CATEGORIES.find((c) => c.words.concat([c.label, c.title]).some((w) => { const x = fold(w); return x === n || (n.length >= 4 && x.startsWith(n)); })) || null;
+  }
+  CATEGORIES.forEach((c) => {
+    const b = document.createElement('button');
+    b.className = 'cat-tile';
+    b.innerHTML = iconSvg(c.icon, 22) + '<span>' + esc(c.label) + '</span>';
+    b.onclick = () => openCategory(c);
+    $('#cats').appendChild(b);
+  });
+  let knownCategories = null; // nomi di categoria che Mapbox conosce (chiesti una volta sola)
+  async function categoryIdsFor(cat) {
+    if (!knownCategories) {
+      try {
+        const r = await fetch('https://api.mapbox.com/search/searchbox/v1/list/category?language=it&access_token=' + token);
+        const d = r.ok ? await r.json() : {};
+        knownCategories = new Set((d.listItems || []).map((x) => x.canonical_id));
+      } catch (e) { knownCategories = new Set(); }
+    }
+    const ok = cat.ids.filter((id) => knownCategories.has(id));
+    return ok.length ? ok : cat.ids;
+  }
+  async function fetchCategory(cat) {
+    const ids = await categoryIdsFor(cat);
+    let lastError = null;
+    for (const id of ids) {
+      const url = 'https://api.mapbox.com/search/searchbox/v1/category/' + encodeURIComponent(id) + '?language=it&limit=25&proximity=' + state.origin.join(',') + '&access_token=' + token;
+      const res = await fetch(url);
+      if (!res.ok) { lastError = new Error('HTTP ' + res.status); if (res.status === 401 || res.status === 403 || res.status === 429) break; continue; }
+      const data = await res.json();
+      if ((data.features || []).length) return data.features;
+    }
+    if (lastError) throw lastError;
+    return [];
+  }
+  const catMarkers = [];
+  function clearCategoryPins() { catMarkers.splice(0).forEach((m) => m.remove()); }
+  function drawCategoryPins() {
+    clearCategoryPins();
+    const c = state.category;
+    if (!c) return;
+    c.items.forEach((pl, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'cat-pin-wrap';
+      wrap.innerHTML = '<button class="cat-pin" aria-label="' + esc(pl.name) + '">' + iconSvg(c.cat.icon, 15) + '</button>';
+      wrap.firstChild.onclick = (e) => { e.stopPropagation(); openCategoryItem(i); };
+      catMarkers.push(new mapboxgl.Marker({ element: wrap }).setLngLat(pl.coord).addTo(map));
+    });
+  }
+  function highlightCategoryPin(i, hide) {
+    catMarkers.forEach((m, k) => {
+      const el = m.getElement();
+      el.firstChild.classList.toggle('sel', k === i && !hide);
+      el.style.visibility = k === i && hide ? 'hidden' : '';
+    });
+  }
+  async function openCategory(cat) {
+    const seq = ++searchSeq;
+    state.category = { cat, items: [], loading: true };
+    pin.remove();
+    showCategory();
+    try {
+      const feats = await fetchCategory(cat);
+      if (seq !== searchSeq || !state.category || state.category.cat !== cat) return;
+      const items = feats.map((f) => placeFromFeature(f)).filter((pl) => pl.distance < 50000);
+      items.sort((a, b) => a.distance - b.distance);
+      state.category = { cat, items, loading: false };
+    } catch (e) {
+      if (seq !== searchSeq || !state.category) return;
+      state.category = { cat, items: [], loading: false, error: e.message };
+    }
+    if (state.phase === 'category') showCategory();
+  }
+  function showCategory() {
+    const c = state.category;
+    show('category');
+    $('#catTitle').textContent = c.cat.title;
+    const n = c.items.length;
+    $('#catSub').textContent = c.loading ? 'Cerco nei dintorni…' : c.error ? 'Ricerca non riuscita' : n ? n + (n === 1 ? ' risultato' : ' risultati') + ' · il più vicino a ' + fmtKm(c.items[0].distance) : 'Nessun risultato qui vicino';
+    const list = $('#catList');
+    list.innerHTML = '';
+    if (c.loading || c.error || !n) {
+      list.innerHTML = '<div class="hint">' + (c.loading ? 'Un attimo…' : c.error ? 'Ricerca non riuscita (' + esc(c.error) + ').' : 'Prova a spostarti o a cercare per nome.') + '</div>';
+    }
+    c.items.forEach((pl, i) => {
+      const b = document.createElement('button');
+      b.className = 'result';
+      const st = openStatus(pl.hours);
+      b.innerHTML = '<span class="ic">' + iconSvg(c.cat.icon, 17) + '</span><div><b>' + esc(pl.name) + '</b><span class="sub">' + esc(pl.address || pl.category) + '</span>' + (st ? '<span class="status"><i style="background:' + (st.open ? 'var(--green)' : 'var(--red)') + '"></i>' + esc(st.text) + '</span>' : '') + '</div><span class="km">' + fmtKm(pl.distance) + '</span>';
+      b.onclick = () => openCategoryItem(i);
+      list.appendChild(b);
+    });
+    list.scrollTop = 0;
+    drawCategoryPins();
+    requestAnimationFrame(() => {
+      liftMapControls($('#category .cat-sheet'));
+      // Inquadra la tua posizione e i risultati più vicini (fino a 8) nello spazio libero.
+      const pts = [state.origin].concat(c.items.slice(0, 8).map((pl) => pl.coord));
+      if (pts.length > 1) fitPoints(pts, $('#category .head'), $('#category .cat-sheet'), 1400, { pitch: 40, maxZoom: 16.5, rotate: false });
+    });
+  }
+  function openCategoryItem(i) {
+    const c = state.category;
+    if (!c || !c.items[i]) return;
+    state.place = c.items[i];
+    state.placeFrom = 'category';
+    state.categoryIndex = i;
+    showPlace();
+    highlightCategoryPin(i, true);
+  }
+  $('#backCategory').onclick = () => { searchSeq++; state.category = null; clearCategoryPins(); openSearch(); };
+
   // Orari di apertura (formato Search Box: periodi con giorno 0 = domenica e ora "HHMM").
   function openStatus(h) {
     if (!h || !Array.isArray(h.periods) || !h.periods.length) return null;
@@ -1294,7 +1464,11 @@ window.addEventListener('unhandledrejection', (e) => {
       liftMapControls($('#place .place-card'));
     });
   }
-  $('#backPlace').onclick = () => { pin.remove(); show('search'); };
+  $('#backPlace').onclick = () => {
+    pin.remove();
+    if (state.placeFrom === 'category' && state.category) { highlightCategoryPin(-1); showCategory(); }
+    else show('search');
+  };
   $('#placeRoute').onclick = () => choose(state.place);
   $('#placeSave').onclick = (e) => { e.stopPropagation(); $('#placeMenu').hidden = !$('#placeMenu').hidden; };
   document.querySelectorAll('[data-place-save]').forEach((b) => b.onclick = () => { savePlace(state.place, b.dataset.placeSave); $('#placeMenu').hidden = true; });
@@ -1348,6 +1522,7 @@ window.addEventListener('unhandledrejection', (e) => {
     ['route-glow', 'route-core', 'route-light', 'route-wave-glow', 'route-wave'].forEach((id) => { if (map.getLayer(id)) map.setPaintProperty(id, 'line-trim-offset', [0, Math.min(0.999, Math.max(0, f))]); });
   }
   function openPreview() {
+    clearCategoryPins(); state.category = null;
     show('preview');
     $('#destName').textContent = state.dest.name;
     $('#destAddr').textContent = state.dest.address;
@@ -1369,19 +1544,25 @@ window.addEventListener('unhandledrejection', (e) => {
   }
   function fitRoute(duration) {
     if (!state.routes.length) return;
-    const pts = state.routes[state.sel].geometry.coordinates.concat([state.origin, state.dest.coord]).map(mercator);
-    const { padding, W, H } = freePadding($('#preview .head'), $('#preview .bottom'));
+    const pts = state.routes[state.sel].geometry.coordinates.concat([state.origin, state.dest.coord]);
+    fitPoints(pts, $('#preview .head'), $('#preview .bottom'), duration, { pitch: 30, maxZoom: 17, rotate: true });
+  }
+  // Inquadra dei punti nello spazio libero tra un elemento in alto e uno in basso (5% di margine).
+  // Con rotate prova diverse rotazioni della mappa e tiene quella che li mostra più grandi.
+  function fitPoints(lngLats, topEl, bottomEl, duration, opts) {
+    const pts = lngLats.map(mercator);
+    const { padding, W, H } = freePadding(topEl, bottomEl);
     const availW = Math.max(60, W - padding.left - padding.right), availH = Math.max(60, H - padding.top - padding.bottom);
-    const PITCH = 30, pitchCorrection = Math.log2(Math.cos(PITCH * toR));
+    const PITCH = opts.pitch, pitchCorrection = Math.log2(Math.cos(PITCH * toR));
     let best = null;
-    for (let b = -90; b <= 90; b += 5) {
+    for (let b = opts.rotate ? -90 : 0; b <= (opts.rotate ? 90 : 0); b += 5) {
       const c = Math.cos(b * toR), sn = Math.sin(b * toR);
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
       for (const [x, y] of pts) {
         const rx = x * c + y * sn, ry = -x * sn + y * c;
         if (rx < x0) x0 = rx; if (rx > x1) x1 = rx; if (ry < y0) y0 = ry; if (ry > y1) y1 = ry;
       }
-      const zoom = Math.min(17, Math.log2(Math.min(availW / Math.max(x1 - x0, 1e-9), availH / Math.max(y1 - y0, 1e-9))) + pitchCorrection);
+      const zoom = Math.min(opts.maxZoom, Math.log2(Math.min(availW / Math.max(x1 - x0, 1e-9), availH / Math.max(y1 - y0, 1e-9))) + pitchCorrection);
       const score = zoom - 0.004 * Math.abs(b);
       if (!best || score > best.score) {
         const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
@@ -1389,7 +1570,7 @@ window.addEventListener('unhandledrejection', (e) => {
       }
     }
     map.easeTo({ center: best.center, zoom: best.zoom, bearing: best.bearing, pitch: PITCH, padding, duration });
-    liftMapControls($('#preview .bottom'));
+    liftMapControls(bottomEl);
   }
   // Il logo e l'attribuzione di Mapbox devono restare visibili: li alziamo sopra le schede.
   function liftMapControls(el) {
@@ -1547,6 +1728,7 @@ window.addEventListener('unhandledrejection', (e) => {
     if (state.sim) cancelAnimationFrame(state.sim.raf);
     if (state.orbit) cancelAnimationFrame(state.orbit);
     stopWave();
+    clearCategoryPins(); state.category = null;
     state.sim = null; state.orbit = null; state.routes = []; state.dest = null; state.trim = 0;
     pin.remove(); beacon.remove();
     $('#starMenu').hidden = true;
