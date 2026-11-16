@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070A10">
+<title>Columbus · anteprima</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --base: #070A10; --panel: #0E131B; --raised: #151B25; --stroke: #2A313C;
+  --gold: #E9C46A; --gold-light: #F3D58C; --gold-soft: #D9BD7C; --gold-dim: #B89B5E;
+  --bone: #EDE6D6; --secondary: #A8AEB8; --muted: #6B7380;
+  --green: #4CD07D; --amber: #E9A23B; --red: #E5484D;
+  --top: 58px; --bottom: 22px;
+  --serif: 'Bodoni Moda', 'Didot', 'New York', Georgia, serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: #030507; color: var(--bone); font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+button { font-family: inherit; color: inherit; cursor: pointer; }
+#stage { min-height: 100%; display: flex; align-items: center; justify-content: center; padding: 24px; }
+#phone { position: relative; width: 390px; height: 844px; border-radius: 46px; overflow: hidden; background: var(--base); box-shadow: 0 0 0 10px #12151b, 0 0 0 11px #2a2f38, 0 40px 90px rgba(0,0,0,0.65); }
+@media (max-width: 520px), (max-height: 700px) and (max-width: 900px) {
+  #stage { padding: 0; }
+  #phone { width: 100vw; height: 100dvh; border-radius: 0; box-shadow: none; }
+  :root { --top: calc(max(env(safe-area-inset-top), 12px) + 8px); --bottom: max(env(safe-area-inset-bottom), 12px); }
+}
+#map { position: absolute; inset: 0; }
+.mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right { bottom: 118px; }
+body[data-phase="nav"] .mapboxgl-ctrl-bottom-left, body[data-phase="nav"] .mapboxgl-ctrl-bottom-right { bottom: 84px; }
+.mapboxgl-ctrl-attrib { background: rgba(7,10,16,0.6) !important; }
+.mapboxgl-ctrl-attrib a { color: #8E949E !important; }
+
+.shade { position: absolute; left: 0; right: 0; pointer-events: none; transition: height .5s ease; }
+.shade.top { top: 0; height: 230px; background: linear-gradient(180deg, rgba(5,8,13,0.92), rgba(5,8,13,0)); }
+.shade.bottom { bottom: 0; height: 300px; background: linear-gradient(0deg, rgba(5,8,13,0.95), rgba(5,8,13,0)); }
+body[data-phase="nav"] .shade.top { height: 400px; }
+body[data-phase="search"] .shade { opacity: 0; }
+
+.screen { position: absolute; inset: 0; pointer-events: none; display: flex; flex-direction: column; animation: fadeIn .45s ease both; }
+.screen[hidden] { display: none; }
+.screen > * { pointer-events: auto; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.kicker { font-size: 11px; font-weight: 500; letter-spacing: .34em; text-transform: uppercase; color: var(--gold-dim); }
+.serif { font-family: var(--serif); }
+.wordmark { font-family: var(--serif); font-size: 13px; letter-spacing: .5em; color: var(--gold-soft); text-align: center; padding-top: var(--top); }
+
+/* Esplora */
+.where { margin: 22px 28px 0; display: flex; align-items: flex-end; gap: 12px; padding: 0 0 10px; background: none; border: 0; border-bottom: 1px solid rgba(233,196,106,0.45); text-align: left; }
+.where span { flex: 1; font-family: var(--serif); font-style: italic; font-size: 32px; color: rgba(237,230,214,0.9); }
+.where svg { color: var(--gold-light); }
+.light { margin: 14px 28px 0; align-self: flex-start; display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(14,19,27,0.82); border: 1px solid var(--stroke); }
+.light button { height: 30px; padding: 0 10px; border-radius: 10px; border: 1px solid transparent; background: none; font-size: 12px; color: var(--secondary); }
+.light button[aria-pressed="true"] { color: var(--gold-light); background: rgba(233,196,106,0.14); border-color: rgba(233,196,106,0.5); }
+.spacer { flex: 1; pointer-events: none !important; }
+.card { margin: 0 24px 12px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.card h2 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 30px; }
+.card p { margin: 0; font-size: 14px; color: var(--secondary); }
+.link { margin-top: 6px; background: none; border: 0; font-size: 12px; letter-spacing: .2em; color: var(--gold); }
+
+/* Sestante */
+.sextant { position: relative; height: 112px; overflow: hidden; margin-bottom: var(--bottom); touch-action: none; user-select: none; }
+.dial { position: absolute; left: 50%; top: 24px; width: 500px; height: 500px; margin-left: -250px; border-radius: 50%; transition: transform .7s cubic-bezier(.2,.9,.25,1.12);
+  background: radial-gradient(circle, #0A0C11 0 61%, transparent 61.5%), conic-gradient(#0C0F15, #1A1F28, #0C0F15, #171B23, #0C0F15, #1A1F28, #0C0F15);
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(233,196,106,0.55); }
+.dial.dragging { transition: none; }
+.ticks { position: absolute; inset: 0; border-radius: 50%;
+  background: repeating-conic-gradient(from -0.4deg, rgba(243,213,140,0.85) 0 0.8deg, transparent 0.8deg 25deg), repeating-conic-gradient(from -0.2deg, rgba(233,196,106,0.35) 0 0.4deg, transparent 0.4deg 5deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 236px, #000 237px 248px, transparent 249px); mask: radial-gradient(circle, transparent 0 236px, #000 237px 248px, transparent 249px); }
+.dial button { position: absolute; left: 50%; top: 50%; background: none; border: 0; padding: 10px 8px; font-size: 12px; font-weight: 600; letter-spacing: .3em; white-space: nowrap; color: var(--secondary); }
+.dial button[aria-pressed="true"] { color: var(--gold-light); }
+.pointer { position: absolute; left: 50%; top: 4px; margin-left: -7px; width: 14px; height: 10px; background: var(--gold-light); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+
+/* Ricerca */
+#search { background: rgba(7,10,16,0.97); padding: var(--top) 24px 0; gap: 16px; }
+.search-row { display: flex; align-items: flex-end; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(233,196,106,0.55); }
+.search-row input { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--bone); font-family: var(--serif); font-style: italic; font-size: 32px; }
+.search-row input::placeholder { color: var(--secondary); }
+.search-row button { background: none; border: 0; color: var(--gold); font-size: 16px; }
+#results { flex: 1; overflow-y: auto; }
+.result { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 0; background: none; border: 0; border-bottom: 1px solid #1A2029; text-align: left; }
+.result .ic { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--raised); display: flex; align-items: center; justify-content: center; color: var(--gold); }
+.result b { display: block; font-weight: 500; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result small { display: block; font-size: 13px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.result div { min-width: 0; flex: 1; }
+.hint { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--secondary); }
+
+/* Anteprima */
+.head { display: flex; align-items: center; gap: 14px; padding: var(--top) 20px 0; }
+.round { flex: none; width: 42px; height: 42px; border-radius: 50%; background: rgba(7,10,16,0.4); border: 1px solid rgba(237,230,214,0.3); display: flex; align-items: center; justify-content: center; }
+.head h1 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 28px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.head p { margin: 2px 0 0; font-size: 13px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.head > div { min-width: 0; }
+.bottom { padding: 0 20px calc(var(--bottom) + 4px); display: flex; flex-direction: column; gap: 14px; }
+.options { display: flex; gap: 10px; }
+.option { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 14px; border-radius: 18px; background: rgba(14,19,27,0.92); border: 1px solid rgba(237,230,214,0.14); text-align: left; }
+.option[aria-pressed="true"] { background: rgba(233,196,106,0.10); border-color: rgba(243,213,140,0.7); }
+.option .min { font-family: var(--serif); font-size: 40px; line-height: 1; }
+.option .min i { font-size: 16px; }
+.option[aria-pressed="true"] .min { color: var(--gold-light); }
+.option b { font-size: 13px; font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.option small { font-size: 12px; color: var(--secondary); }
+.traffic { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--secondary); }
+.traffic i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.go { height: 56px; border: 0; border-radius: 28px; background: linear-gradient(180deg, #F3D58C, #DDB45A); color: #0A0D12; font-size: 16px; font-weight: 700; letter-spacing: .04em; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 0 28px rgba(233,196,106,0.35); }
+
+/* Guida */
+#nav { padding: var(--top) 26px 0; }
+.hud-top { display: flex; align-items: flex-start; gap: 10px; }
+.hud-top > div { flex: 1; min-width: 0; }
+.dist { display: flex; align-items: baseline; gap: 6px; font-family: var(--serif); color: var(--gold-light); }
+.odo { display: flex; height: 1em; overflow: hidden; line-height: 1; font-size: 92px; font-weight: 500; font-variant-numeric: lining-nums tabular-nums; }
+.odo .col { height: 1em; overflow: hidden; }
+.odo .strip { display: flex; flex-direction: column; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+.odo .strip span, .odo .sep { height: 1em; display: block; }
+.unit { font-size: 34px; font-style: italic; color: var(--gold-soft); }
+.maneuver { flex: none; margin-top: 30px; color: var(--gold-light); }
+.instruction { margin: 4px 0 0; font-family: var(--serif); font-style: italic; font-size: 30px; line-height: 1.1; }
+.then { margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--secondary); }
+.then .kicker { font-size: 10px; }
+.trip { margin-bottom: calc(var(--bottom) + 4px); display: flex; align-items: center; gap: 12px; font-size: 15px; }
+.trip .eta { font-family: var(--serif); font-size: 26px; color: var(--gold-light); }
+.trip small { font-size: 13px; color: var(--secondary); }
+.trip .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--gold-dim); }
+.end { margin-left: auto; height: 44px; padding: 0 18px; border-radius: 22px; background: rgba(7,10,16,0.5); border: 1px solid rgba(229,72,77,0.6); font-size: 15px; }
+.sim { position: absolute; right: 26px; bottom: calc(var(--bottom) + 60px); font-size: 10px; letter-spacing: .24em; color: var(--muted); }
+
+/* Arrivo */
+#arrival { padding: 0 28px calc(var(--bottom) + 8px); justify-content: flex-end; gap: 14px; }
+#arrival h1 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 52px; line-height: 1; }
+#arrival p { margin: 0; font-family: var(--serif); font-style: italic; font-size: 20px; color: #D7C6A2; }
+.rule { width: 44px; height: 1px; background: var(--gold); margin: 4px 0; }
+.row { display: flex; gap: 10px; }
+.row .go { flex: 1; }
+.ghost { height: 54px; padding: 0 22px; border-radius: 27px; background: none; border: 1px solid rgba(237,230,214,0.35); font-size: 15px; }
+
+/* Marker */
+.puck { width: 64px; height: 64px; position: relative; }
+.puck .ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid rgba(243,213,140,0.5); animation: pulse 2.4s ease-out infinite; }
+.puck .halo { position: absolute; inset: 8px; border-radius: 50%; background: radial-gradient(circle, rgba(243,213,140,0.35), rgba(243,213,140,0) 70%); }
+.puck svg { position: absolute; left: 14px; top: 12px; filter: drop-shadow(0 0 6px rgba(243,213,140,0.7)); }
+@keyframes pulse { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
+.pin { width: 40px; height: 52px; filter: drop-shadow(0 0 10px rgba(243,213,140,0.6)); }
+.beacon { width: 70px; height: 340px; pointer-events: none; background: linear-gradient(90deg, rgba(243,213,140,0) 0%, rgba(243,213,140,0.16) 30%, rgba(255,241,204,0.95) 49%, rgba(255,241,204,0.95) 51%, rgba(243,213,140,0.16) 70%, rgba(243,213,140,0) 100%); -webkit-mask-image: linear-gradient(180deg, transparent, #000 80%); mask-image: linear-gradient(180deg, transparent, #000 80%); animation: beam 3s ease-in-out infinite; }
+@keyframes beam { 50% { opacity: .7; } }
+
+/* Messaggi */
+#toast { position: absolute; left: 20px; right: 20px; top: calc(var(--top) + 120px); padding: 14px 16px; border-radius: 16px; background: rgba(14,19,27,0.96); border: 1px solid rgba(233,162,59,0.5); font-size: 14px; line-height: 1.4; opacity: 0; transform: translateY(-6px); transition: all .3s ease; pointer-events: none; z-index: 5; }
+#toast.show { opacity: 1; transform: none; }
+#gate { position: absolute; inset: 0; z-index: 6; background: var(--base); display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 32px; }
+#gate h1 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 32px; }
+#gate p { margin: 0; color: var(--secondary); font-size: 15px; line-height: 1.5; }
+#fatal { position: absolute; inset: 0; z-index: 7; background: var(--base); display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 32px; }
+#fatal h1 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 30px; }
+#fatal p { margin: 0; color: var(--secondary); font-size: 15px; line-height: 1.5; }
+#fatal code { display: block; padding: 12px 14px; border-radius: 12px; background: var(--panel); border: 1px solid rgba(229,72,77,0.5); color: var(--bone); font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+#gate input { height: 50px; border-radius: 14px; border: 1px solid var(--stroke); background: var(--panel); color: var(--bone); padding: 0 14px; font-size: 14px; }
+</style>
+</head>
+<body data-phase="browse">
+<div id="stage">
+<div id="phone">
+  <div id="map"></div>
+  <div class="shade top"></div>
+  <div class="shade bottom"></div>
+
+  <!-- Esplora -->
+  <section id="browse" class="screen">
+    <div class="wordmark">COLUMBUS</div>
+    <button class="where" id="openSearch" aria-label="Cerca una destinazione">
+      <span>Dove si va?</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    </button>
+    <div class="light" role="group" aria-label="Luce della mappa">
+      <button data-light="dawn">Alba</button>
+      <button data-light="day">Giorno</button>
+      <button data-light="dusk">Tramonto</button>
+      <button data-light="night">Notte</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="card" id="sectionCard"></div>
+    <div class="sextant" id="sextant">
+      <div class="pointer"></div>
+      <div class="dial" id="dial"><div class="ticks"></div></div>
+    </div>
+  </section>
+
+  <!-- Ricerca -->
+  <section id="search" class="screen" hidden>
+    <div class="search-row">
+      <label for="q" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Destinazione</label>
+      <input id="q" placeholder="Dove si va?" autocomplete="off">
+      <button id="cancelSearch">Annulla</button>
+    </div>
+    <div class="hint" id="searchHint"></div>
+    <div id="results"></div>
+  </section>
+
+  <!-- Anteprima -->
+  <section id="preview" class="screen" hidden>
+    <div class="head">
+      <button class="round" id="backPreview" aria-label="Indietro"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+      <div><h1 id="destName"></h1><p id="destAddr"></p></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="bottom">
+      <div class="options" id="options"></div>
+      <button class="go" id="start"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0A0D12" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3L14 21z"/></svg><span id="startLabel">Parti</span></button>
+    </div>
+  </section>
+
+  <!-- Guida -->
+  <section id="nav" class="screen" hidden>
+    <div class="hud-top">
+      <div>
+        <div class="kicker">Tra</div>
+        <div class="dist" role="timer" id="distLabel"><div class="odo" id="odo" aria-hidden="true"></div><span class="unit" id="unit">m</span></div>
+        <p class="instruction" id="instruction"></p>
+        <div class="then" id="then"></div>
+      </div>
+      <svg class="maneuver" id="maneuver" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+    </div>
+    <div class="spacer"></div>
+    <div class="sim">SIMULAZIONE ×4</div>
+    <div class="trip">
+      <span class="eta" id="eta"></span><small>arrivo</small>
+      <span class="dot"></span><span id="remMin"></span>
+      <span class="dot"></span><span id="remKm"></span>
+      <button class="end" id="end">Fine</button>
+    </div>
+  </section>
+
+  <!-- Arrivo -->
+  <section id="arrival" class="screen" hidden>
+    <div class="kicker" id="arrKicker" style="color: var(--gold-soft)"></div>
+    <h1 id="arrName"></h1>
+    <p id="arrLine"></p>
+    <div class="rule"></div>
+    <div class="row">
+      <button class="go" id="saveLog"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0A0D12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>Salva nel diario</button>
+      <button class="ghost" id="closeArrival">Chiudi</button>
+    </div>
+  </section>
+
+  <div id="toast" role="status"></div>
+
+  <div id="gate" hidden>
+    <div class="kicker">Configurazione</div>
+    <h1>Token Mapbox</h1>
+    <p>Incolla il tuo token pubblico Mapbox (inizia con “pk.”). Resta salvato solo in questo browser.</p>
+    <input id="tokenInput" placeholder="pk.…" autocomplete="off">
+    <button class="go" id="saveToken">Apri l'anteprima</button>
+  </div>
+
+  <div id="fatal" hidden>
+    <div class="kicker">Anteprima</div>
+    <h1>La mappa non riesce a partire</h1>
+    <code id="fatalMsg"></code>
+    <p>Alcuni visualizzatori di file (per esempio quello interno di un'app) non supportano le mappe 3D. Prova ad aprire il file in Safari o Chrome sul Mac. Se l'errore resta, manda uno screenshot di questa schermata.</p>
+  </div>
+</div>
+</div>
+
+<script>
+// Mostra qualsiasi errore sullo schermo, così si capisce cosa non va.
+function showFatal(message) {
+  const box = document.getElementById('fatal');
+  const msg = document.getElementById('fatalMsg');
+  if (!box || !msg) return;
+  message = String(message).replace(/access_token=[^&\s]+/g, 'access_token=…');
+  msg.textContent = (msg.textContent ? msg.textContent + '\n' : '') + message;
+  box.hidden = false;
+}
+window.addEventListener('error', (e) => {
+  const where = e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '';
+  showFatal((e.error && e.error.message ? e.error.message : e.message) + where);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  showFatal('Promise: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+});
+
+(() => {
+  // In questa copia il token è un segnaposto; la copia locale lo contiene già.
+  const EMBEDDED_TOKEN = '__MAPBOX_TOKEN__';
+  const DEFAULT_CENTER = [9.1900, 45.4642]; // Milano, piazza del Duomo (se la posizione non è disponibile)
+  const SIM_SPEED = 4;
+
+  const $ = (s) => document.querySelector(s);
+  const token = EMBEDDED_TOKEN.startsWith('pk.') ? EMBEDDED_TOKEN : (safeGet('columbus-token') || '');
+
+  function safeGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function safeSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  if (!token) {
+    $('#gate').hidden = false;
+    $('#saveToken').onclick = () => {
+      const v = $('#tokenInput').value.trim();
+      if (v.startsWith('pk.')) { safeSet('columbus-token', v); location.reload(); }
+    };
+    return;
+  }
+
+  // ---------- Stato ----------
+  const state = { phase: 'browse', origin: DEFAULT_CENTER, realLocation: false, dest: null, routes: [], sel: 0, sim: null, orbit: null, section: 0 };
+  const SECTIONS = [
+    { key: 'ESPLORA', kicker: 'Esplora', title: 'Dove si va stasera?', sub: 'Cerca un indirizzo o un luogo', link: true },
+    { key: 'NAVIGA', kicker: 'Nessuna rotta attiva', title: 'Scegli una meta', sub: 'La rotta comparirà qui', link: true },
+    { key: 'ROTTE', kicker: 'Rotte salvate', title: 'Casa, Lavoro e i tuoi porti', sub: 'In arrivo nella prossima versione' },
+    { key: 'TRAGITTI', kicker: 'Tragitti', title: 'Il tuo tragitto abituale', sub: 'In arrivo nella prossima versione' },
+    { key: 'DIARIO', kicker: 'Diario di bordo', title: 'Le tue rotte', sub: 'In arrivo nella prossima versione' }
+  ];
+
+  // ---------- Utilità ----------
+  const toR = Math.PI / 180;
+  function dist(a, b) {
+    const dLat = (b[1] - a[1]) * toR, dLon = (b[0] - a[0]) * toR;
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * toR) * Math.cos(b[1] * toR) * Math.sin(dLon / 2) ** 2;
+    return 2 * 6371000 * Math.asin(Math.sqrt(s));
+  }
+  function bearingOf(a, b) {
+    const y = Math.sin((b[0] - a[0]) * toR) * Math.cos(b[1] * toR);
+    const x = Math.cos(a[1] * toR) * Math.sin(b[1] * toR) - Math.sin(a[1] * toR) * Math.cos(b[1] * toR) * Math.cos((b[0] - a[0]) * toR);
+    return (Math.atan2(y, x) / toR + 360) % 360;
+  }
+  const fmtKm = (m) => m >= 1000 ? (m / 1000).toLocaleString('it-IT', { minimumFractionDigits: m >= 10000 ? 0 : 1, maximumFractionDigits: m >= 10000 ? 0 : 1 }) + ' km' : Math.round(m / 10) * 10 + ' m';
+  const fmtClock = (secs) => new Date(Date.now() + secs * 1000).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let toastTimer;
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 4200); }
+
+  function show(phase) {
+    state.phase = phase;
+    for (const id of ['browse', 'search', 'preview', 'nav', 'arrival']) $('#' + id).hidden = id !== phase;
+    document.body.dataset.phase = phase;
+  }
+
+  // ---------- Mappa ----------
+  function presetForNow() { const h = new Date().getHours(); return h >= 5 && h < 8 ? 'dawn' : h >= 8 && h < 17 ? 'day' : h >= 17 && h < 19 ? 'dusk' : 'night'; }
+  let preset = presetForNow();
+
+  if (typeof mapboxgl === 'undefined') {
+    showFatal('La libreria Mapbox GL JS non si è caricata (api.mapbox.com non raggiungibile o bloccato).');
+    return;
+  }
+  if (typeof mapboxgl.supported === 'function' && !mapboxgl.supported()) {
+    showFatal('WebGL non è disponibile in questo visualizzatore.');
+    return;
+  }
+  mapboxgl.accessToken = token;
+  let map;
+  try {
+    map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/standard',
+      config: { basemap: { lightPreset: preset, showPointOfInterestLabels: true } },
+      center: DEFAULT_CENTER, zoom: 15.6, pitch: 60, bearing: -20,
+      language: 'it'
+    });
+  } catch (e) {
+    showFatal('Creazione della mappa: ' + (e && e.message ? e.message : String(e)));
+    return;
+  }
+  let mapLoaded = false;
+  map.on('load', () => { mapLoaded = true; });
+  map.on('error', (e) => {
+    const err = (e && e.error) || {};
+    const status = err.status;
+    if (status === 401 || status === 403) {
+      showFatal('Mapbox rifiuta il token (errore ' + status + '). Controlla il token o i limiti dell\'account di prova.');
+    } else if (!mapLoaded) {
+      showFatal('Errore nel caricare la mappa: ' + (err.message || 'sconosciuto') + (err.url ? '\n' + String(err.url).split('?')[0] : ''));
+    }
+  });
+  setTimeout(() => {
+    if (!mapLoaded) showFatal('La mappa non ha ricevuto dati da Mapbox entro 15 secondi. Questo visualizzatore potrebbe bloccare le connessioni verso api.mapbox.com.');
+  }, 15000);
+
+  const EMPTY = { type: 'FeatureCollection', features: [] };
+  const DASHES = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0], [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]];
+
+  map.on('style.load', () => {
+    map.addSource('route', { type: 'geojson', lineMetrics: true, data: EMPTY });
+    map.addSource('alt', { type: 'geojson', data: EMPTY });
+    const common = { type: 'line', slot: 'middle', layout: { 'line-cap': 'round', 'line-join': 'round' } };
+    map.addLayer({ ...common, id: 'alt-line', source: 'alt', paint: { 'line-color': '#9AA1AC', 'line-opacity': 0.55, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 3, 18, 10], 'line-emissive-strength': 1 } });
+    map.addLayer({ ...common, id: 'route-glow', source: 'route', paint: { 'line-color': '#F3D58C', 'line-opacity': 0.5, 'line-blur': 12, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 14, 18, 46], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
+    map.addLayer({ ...common, id: 'route-core', source: 'route', paint: { 'line-color': '#E9C46A', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 5, 18, 18], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
+    map.addLayer({ ...common, id: 'route-light', source: 'route', paint: { 'line-color': '#FFF4D6', 'line-opacity': 0.85, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.2, 18, 5], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
+    map.addLayer({ ...common, id: 'route-flow', source: 'route', paint: { 'line-color': '#FFFFFF', 'line-opacity': 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 2, 18, 7], 'line-dasharray': DASHES[0], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
+    let step = 0;
+    setInterval(() => {
+      step = (step + 1) % DASHES.length;
+      if (map.getLayer('route-flow')) map.setPaintProperty('route-flow', 'line-dasharray', DASHES[step]);
+    }, 60);
+  });
+
+  function setLight(p) {
+    preset = p;
+    document.querySelectorAll('[data-light]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.light === p)));
+    try { map.setConfigProperty('basemap', 'lightPreset', p); } catch (e) {}
+  }
+  document.querySelectorAll('[data-light]').forEach((b) => b.onclick = () => setLight(b.dataset.light));
+  setLight(preset);
+
+  // Marker posizione
+  const puckEl = document.createElement('div');
+  puckEl.className = 'puck';
+  puckEl.innerHTML = '<div class="halo"></div><div class="ring"></div><svg width="36" height="40" viewBox="0 0 36 40"><defs><linearGradient id="pk" x1="0" x2="1"><stop offset="0" stop-color="#B98F3E"/><stop offset=".5" stop-color="#C9A04E"/><stop offset=".5" stop-color="#F3D58C"/><stop offset="1" stop-color="#FFF1CC"/></linearGradient></defs><path d="M18 2 L33 36 L18 28 L3 36 Z" fill="url(#pk)" stroke="#FFF4D6" stroke-width="1" stroke-linejoin="round"/></svg>';
+  const puck = new mapboxgl.Marker({ element: puckEl, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(DEFAULT_CENTER).addTo(map);
+
+  // Destinazione: segnaposto e colonna di luce
+  const pinEl = document.createElement('div');
+  pinEl.innerHTML = '<svg class="pin" viewBox="0 0 40 52"><defs><linearGradient id="pn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF1CC"/><stop offset="1" stop-color="#C9A04E"/></linearGradient></defs><path d="M20 51 C20 51 3 32 3 19 a17 17 0 0 1 34 0 c0 13 -17 32 -17 32z" fill="url(#pn)" stroke="#FFF4D6" stroke-width="1.2"/><circle cx="20" cy="19" r="6" fill="#0C1320"/></svg>';
+  const pin = new mapboxgl.Marker({ element: pinEl, anchor: 'bottom' });
+  const beaconEl = document.createElement('div');
+  beaconEl.className = 'beacon';
+  const beacon = new mapboxgl.Marker({ element: beaconEl, anchor: 'bottom' });
+
+  function browseCamera(duration = 1800) {
+    map.flyTo({ center: state.origin, zoom: 15.6, pitch: 60, bearing: -20, padding: { top: 120, bottom: 240, left: 0, right: 0 }, duration });
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      state.origin = [pos.coords.longitude, pos.coords.latitude];
+      state.realLocation = true;
+      puck.setLngLat(state.origin);
+      if (state.phase === 'browse') browseCamera(2400);
+    }, () => toast('Posizione non disponibile: parto da Milano, piazza del Duomo.'), { enableHighAccuracy: true, timeout: 8000 });
+  } else {
+    toast('Posizione non disponibile: parto da Milano, piazza del Duomo.');
+  }
+
+  // ---------- Sestante ----------
+  const dial = $('#dial');
+  const STEP = 28;
+  SECTIONS.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.textContent = s.key;
+    b.style.transform = 'translate(-50%, -50%) rotate(' + ((i - 2) * STEP) + 'deg) translateY(-204px)';
+    b.onclick = () => selectSection(i);
+    dial.appendChild(b);
+  });
+  function selectSection(i) {
+    state.section = Math.max(0, Math.min(SECTIONS.length - 1, i));
+    dial.style.transform = 'rotate(' + (-(state.section - 2) * STEP) + 'deg)';
+    dial.querySelectorAll('button').forEach((b, j) => b.setAttribute('aria-pressed', String(j === state.section)));
+    const s = SECTIONS[state.section];
+    $('#sectionCard').innerHTML = '<div class="kicker">' + esc(s.kicker) + '</div><h2>' + esc(s.title) + '</h2><p>' + esc(s.sub) + '</p>' + (s.link ? '<button class="link" data-open-search>CERCA UNA DESTINAZIONE</button>' : '');
+    const l = $('#sectionCard [data-open-search]');
+    if (l) l.onclick = openSearch;
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+  selectSection(0);
+  let dragX = null;
+  $('#sextant').addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; dragX = e.clientX; dial.classList.add('dragging'); $('#sextant').setPointerCapture(e.pointerId); });
+  $('#sextant').addEventListener('pointermove', (e) => { if (dragX === null) return; const a = (e.clientX - dragX) / 4; dial.style.transform = 'rotate(' + (-(state.section - 2) * STEP + a) + 'deg)'; });
+  $('#sextant').addEventListener('pointerup', (e) => { if (dragX === null) return; const steps = Math.round((e.clientX - dragX) / 4 / STEP); dragX = null; dial.classList.remove('dragging'); selectSection(state.section - steps); });
+
+  // ---------- Ricerca ----------
+  function openSearch() { show('search'); $('#q').value = ''; $('#results').innerHTML = ''; $('#searchHint').textContent = ''; setTimeout(() => $('#q').focus(), 50); }
+  $('#openSearch').onclick = openSearch;
+  $('#cancelSearch').onclick = () => show('browse');
+  let searchTimer, searchSeq = 0;
+  $('#q').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = $('#q').value.trim();
+    if (q.length < 2) { $('#results').innerHTML = ''; $('#searchHint').textContent = ''; return; }
+    searchTimer = setTimeout(() => search(q), 300);
+  });
+  async function search(q) {
+    const seq = ++searchSeq;
+    const url = 'https://api.mapbox.com/search/searchbox/v1/forward?q=' + encodeURIComponent(q) + '&language=it&limit=8&proximity=' + state.origin.join(',') + '&access_token=' + token;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (seq !== searchSeq) return;
+      const places = (data.features || []).map((f) => ({
+        id: f.properties.mapbox_id, name: f.properties.name || f.properties.full_address || 'Luogo',
+        address: f.properties.full_address || f.properties.place_formatted || '', coord: f.geometry.coordinates
+      }));
+      $('#searchHint').textContent = places.length ? '' : 'Nessun risultato';
+      $('#results').innerHTML = '';
+      places.forEach((p) => {
+        const b = document.createElement('button');
+        b.className = 'result';
+        b.innerHTML = '<span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></span><div><b>' + esc(p.name) + '</b><small>' + esc(p.address) + '</small></div>';
+        b.onclick = () => choose(p);
+        $('#results').appendChild(b);
+      });
+    } catch (e) {
+      $('#searchHint').textContent = 'Ricerca non riuscita (' + e.message + ').';
+    }
+  }
+
+  // ---------- Percorsi ----------
+  async function choose(place) {
+    $('#searchHint').textContent = 'Traccio la rotta…';
+    const coords = state.origin.join(',') + ';' + place.coord.join(',');
+    const url = 'https://api.mapbox.com/directions/v5/mapbox/driving-traffic/' + coords + '?alternatives=true&geometries=geojson&overview=full&steps=true&language=it&annotations=congestion&access_token=' + token;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (!data.routes || !data.routes.length) throw new Error(data.message || 'nessun percorso');
+      state.dest = place;
+      state.routes = data.routes;
+      state.sel = 0;
+      openPreview();
+    } catch (e) {
+      $('#searchHint').textContent = 'Percorso non disponibile (' + e.message + ').';
+    }
+  }
+
+  function traffic(route) {
+    const c = (route.legs[0] && route.legs[0].annotation && route.legs[0].annotation.congestion) || [];
+    if (!c.length) return ['Scorrevole', 'var(--green)'];
+    const heavy = c.filter((x) => x === 'heavy' || x === 'severe').length / c.length;
+    const mod = c.filter((x) => x === 'moderate').length / c.length;
+    if (heavy > 0.12) return ['Intenso', 'var(--red)'];
+    if (heavy + mod > 0.2) return ['Moderato', 'var(--amber)'];
+    return ['Scorrevole', 'var(--green)'];
+  }
+
+  function drawRoutes() {
+    const sel = state.routes[state.sel];
+    map.getSource('route').setData({ type: 'Feature', geometry: sel.geometry, properties: {} });
+    map.getSource('alt').setData({ type: 'FeatureCollection', features: state.routes.filter((_, i) => i !== state.sel).map((r) => ({ type: 'Feature', geometry: r.geometry, properties: {} })) });
+    setTrim(0);
+  }
+  function setTrim(f) {
+    ['route-glow', 'route-core', 'route-light', 'route-flow'].forEach((id) => { if (map.getLayer(id)) map.setPaintProperty(id, 'line-trim-offset', [0, Math.min(0.999, Math.max(0, f))]); });
+  }
+
+  function openPreview() {
+    show('preview');
+    $('#destName').textContent = state.dest.name;
+    $('#destAddr').textContent = state.dest.address;
+    pin.setLngLat(state.dest.coord).addTo(map);
+    renderOptions();
+    drawRoutes();
+    const coords = state.routes[state.sel].geometry.coordinates;
+    const b = coords.reduce((bb, c) => bb.extend(c), new mapboxgl.LngLatBounds(coords[0], coords[0]));
+    b.extend(state.origin);
+    const cam = map.cameraForBounds(b, { padding: { top: 190, bottom: 380, left: 50, right: 50 } });
+    if (cam) map.easeTo({ ...cam, pitch: 45, bearing: 0, duration: 1800 });
+  }
+  function renderOptions() {
+    const fastest = state.routes.reduce((m, r, i) => r.duration < state.routes[m].duration ? i : m, 0);
+    $('#options').innerHTML = '';
+    state.routes.forEach((r, i) => {
+      const [label, color] = traffic(r);
+      const b = document.createElement('button');
+      b.className = 'option';
+      b.setAttribute('aria-pressed', String(i === state.sel));
+      const summary = i === fastest ? 'La più veloce' : (r.legs[0].summary ? 'via ' + r.legs[0].summary : 'Alternativa');
+      b.innerHTML = '<span class="min">' + Math.max(1, Math.round(r.duration / 60)) + '<i> min</i></span><b>' + esc(summary) + '</b><small>' + fmtKm(r.distance) + '</small><span class="traffic"><i style="background:' + color + '"></i>' + label + '</span>';
+      b.onclick = () => { state.sel = i; renderOptions(); drawRoutes(); };
+      $('#options').appendChild(b);
+    });
+    $('#startLabel').textContent = 'Parti · arrivo ' + fmtClock(state.routes[state.sel].duration);
+  }
+  $('#backPreview').onclick = reset;
+
+  // ---------- Guida (simulata) ----------
+  function prepare(route) {
+    const c = route.geometry.coordinates;
+    const cum = [0];
+    for (let i = 1; i < c.length; i++) cum.push(cum[i - 1] + dist(c[i - 1], c[i]));
+    let idx = 0;
+    const steps = route.legs[0].steps.map((s) => {
+      const loc = s.maneuver.location;
+      let best = idx, bd = Infinity;
+      for (let i = idx; i < c.length; i++) {
+        const d = dist(c[i], loc);
+        if (d < bd) { bd = d; best = i; }
+        if (bd < 15 && d > bd + 200) break;
+      }
+      idx = best;
+      return { s, at: cum[best] };
+    });
+    return { c, cum, total: cum[cum.length - 1] || 1, steps };
+  }
+
+  $('#start').onclick = () => {
+    const r = state.routes[state.sel];
+    const p = prepare(r);
+    state.sim = { r, p, t: 0, seg: 0, last: performance.now(), bearing: bearingOf(p.c[0], p.c[Math.min(1, p.c.length - 1)]), lastDist: '' };
+    show('nav');
+    state.sim.raf = requestAnimationFrame(tick);
+  };
+
+  function tick(now) {
+    const s = state.sim;
+    if (!s) return;
+    const dt = Math.min(0.1, (now - s.last) / 1000);
+    s.last = now;
+    s.t = Math.min(s.p.total, s.t + 14 * SIM_SPEED * dt);
+    while (s.seg < s.p.cum.length - 2 && s.p.cum[s.seg + 1] < s.t) s.seg++;
+    const a = s.p.c[s.seg], b = s.p.c[Math.min(s.seg + 1, s.p.c.length - 1)];
+    const len = (s.p.cum[s.seg + 1] - s.p.cum[s.seg]) || 1;
+    const f = Math.min(1, (s.t - s.p.cum[s.seg]) / len);
+    const pos = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+    if (len > 2) {
+      const target = bearingOf(a, b);
+      const diff = ((target - s.bearing + 540) % 360) - 180;
+      s.bearing = (s.bearing + diff * Math.min(1, dt * 2.5) + 360) % 360;
+    }
+    puck.setLngLat(pos).setRotation(s.bearing);
+    map.jumpTo({ center: pos, bearing: s.bearing, pitch: 62, zoom: 17, padding: { top: 330, bottom: 150, left: 0, right: 0 } });
+    setTrim(s.t / s.p.total);
+    hud(s);
+    if (s.t >= s.p.total) { arrive(); return; }
+    s.raf = requestAnimationFrame(tick);
+  }
+
+  const ICONS = {
+    straight: '<path d="M12 21V4M7 9l5-5 5 5"/>',
+    right: '<path d="M7 21v-8a4 4 0 0 1 4-4h9M16 5l4 4-4 4"/>',
+    left: '<path d="M17 21v-8a4 4 0 0 0-4-4H4M8 5 4 9l4 4"/>',
+    'slight right': '<path d="M8 21V12L17 4M11 4h6v6"/>',
+    'slight left': '<path d="M16 21V12L7 4M13 4H7v6"/>',
+    'sharp right': '<path d="M6 21V6h8l4 10M14 12l4 4 3-5"/>',
+    'sharp left': '<path d="M18 21V6h-8L6 16M10 12l-4 4-3-5"/>',
+    uturn: '<path d="M8 21V9a4 4 0 0 1 8 0v4M12 10l4 4 4-4"/>',
+    arrive: '<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+    roundabout: '<circle cx="12" cy="10" r="4"/><path d="M12 21v-7M16 10h5M18 7l3 3-3 3"/>'
+  };
+  function iconFor(step) {
+    if (!step) return ICONS.straight;
+    if (step.maneuver.type === 'arrive') return ICONS.arrive;
+    if (step.maneuver.type === 'roundabout' || step.maneuver.type === 'rotary') return ICONS.roundabout;
+    return ICONS[step.maneuver.modifier] || ICONS.straight;
+  }
+
+  function setOdometer(text) {
+    const odo = $('#odo');
+    if (odo.childElementCount !== text.length || odo.dataset.shape !== text.replace(/\d/g, '0')) {
+      odo.dataset.shape = text.replace(/\d/g, '0');
+      odo.innerHTML = text.split('').map((ch) => /\d/.test(ch)
+        ? '<span class="col"><span class="strip">' + '0123456789'.split('').map((d) => '<span>' + d + '</span>').join('') + '</span></span>'
+        : '<span class="sep">' + ch + '</span>').join('');
+      odo.offsetHeight; // applica il layout prima della transizione
+    }
+    text.split('').forEach((ch, i) => {
+      if (/\d/.test(ch)) odo.children[i].firstChild.style.transform = 'translateY(' + (-Number(ch)) + 'em)';
+    });
+  }
+
+  function hud(s) {
+    const steps = s.p.steps;
+    let k = steps.findIndex((x, i) => i > 0 && x.at > s.t + 1);
+    if (k < 0) k = steps.length - 1;
+    const cur = steps[k];
+    const next = steps[k + 1];
+    const d = Math.max(0, cur.at - s.t);
+    const text = d >= 1000 ? (d / 1000).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : String(Math.round(d / 10) * 10);
+    if (text !== s.lastDist) {
+      s.lastDist = text;
+      setOdometer(text);
+      $('#unit').textContent = d >= 1000 ? 'km' : 'm';
+      $('#distLabel').setAttribute('aria-label', 'Tra ' + text + (d >= 1000 ? ' chilometri' : ' metri'));
+    }
+    const instr = cur.s.maneuver.instruction || '';
+    if ($('#instruction').textContent !== instr) $('#instruction').textContent = instr;
+    $('#maneuver').innerHTML = iconFor(cur.s);
+    $('#then').innerHTML = next && next.s.maneuver.instruction ? '<span class="kicker">Poi</span><span>' + esc(next.s.name || next.s.maneuver.instruction) + '</span>' : '';
+    const remaining = s.p.total - s.t;
+    const remTime = s.r.duration * remaining / s.p.total;
+    $('#eta').textContent = fmtClock(remTime);
+    $('#remMin').textContent = Math.max(1, Math.round(remTime / 60)) + ' min';
+    $('#remKm').textContent = fmtKm(remaining);
+  }
+  $('#end').onclick = reset;
+
+  // ---------- Arrivo ----------
+  function arrive() {
+    const s = state.sim;
+    cancelAnimationFrame(s.raf);
+    show('arrival');
+    $('#arrKicker').textContent = 'Arrivo · ' + new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    $('#arrName').textContent = state.dest.name;
+    $('#arrLine').textContent = fmtKm(s.r.distance) + ' in ' + Math.max(1, Math.round(s.r.duration / 60)) + ' minuti.';
+    beacon.setLngLat(state.dest.coord).addTo(map);
+    map.setPaintProperty('route-flow', 'line-opacity', 0);
+    let b = map.getBearing();
+    const orbit = () => {
+      b += 0.05;
+      map.jumpTo({ center: state.dest.coord, bearing: b, pitch: 66, zoom: 17.2, padding: { top: 0, bottom: 320, left: 0, right: 0 } });
+      state.orbit = requestAnimationFrame(orbit);
+    };
+    map.easeTo({ center: state.dest.coord, pitch: 66, zoom: 17.2, padding: { top: 0, bottom: 320, left: 0, right: 0 }, duration: 1500 });
+    setTimeout(() => { if (state.phase === 'arrival') { b = map.getBearing(); orbit(); } }, 1550);
+  }
+  $('#closeArrival').onclick = reset;
+  $('#saveLog').onclick = () => { toast('Il diario di bordo arriva nella prossima versione.'); setTimeout(reset, 1200); };
+
+  function reset() {
+    if (state.sim) cancelAnimationFrame(state.sim.raf);
+    if (state.orbit) cancelAnimationFrame(state.orbit);
+    state.sim = null; state.orbit = null; state.routes = []; state.dest = null;
+    pin.remove(); beacon.remove();
+    if (map.getSource('route')) { map.getSource('route').setData(EMPTY); map.getSource('alt').setData(EMPTY); }
+    if (map.getLayer('route-flow')) map.setPaintProperty('route-flow', 'line-opacity', 0.9);
+    puck.setLngLat(state.origin).setRotation(0);
+    show('browse');
+    selectSection(0);
+    browseCamera(1600);
+  }
+})();
+</script>
+</body>
+</html>
