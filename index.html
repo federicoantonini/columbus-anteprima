@@ -222,6 +222,12 @@ body.deep .puck { filter: brightness(0.8); }
 .deep-badge { display: none; align-self: flex-start; margin-bottom: 10px; font-size: 10px; letter-spacing: .32em; color: var(--gold-dim); }
 body.deep .deep-badge { display: block; }
 
+/* Schermata d'apertura: copre la mappa finché la posizione buona non è pronta */
+#splash { position: absolute; inset: 0; z-index: 8; background: var(--base); display: flex; align-items: center; justify-content: center; transition: opacity .7s ease; }
+#splash.gone { opacity: 0; pointer-events: none; }
+#splash span { font-family: var(--serif); font-size: 15px; letter-spacing: .6em; color: var(--gold-soft); animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .45; } }
+
 #toast { position: absolute; left: 20px; right: 20px; top: calc(var(--top) + 120px); padding: 14px 16px; border-radius: 16px; background: rgba(14,19,27,0.96); border: 1px solid rgba(233,196,106,0.5); font-size: 14px; line-height: 1.4; opacity: 0; transform: translateY(-6px); transition: all .3s ease; pointer-events: none; z-index: 6; }
 #toast.show { opacity: 1; transform: none; }
 #gate, #fatal { position: absolute; inset: 0; z-index: 7; background: var(--base); display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 32px; }
@@ -342,6 +348,7 @@ body.deep .deep-badge { display: block; }
           <li>La notte diventa notte fonda da sola: dalle 21 alle 23 gradualmente, piena fino alle 4, poi torna gradualmente</li>
           <li>Edifici più scuri del 15%, terreno, parchi e acqua velati al 40%; strade luminose</li>
           <li>Per provarla di giorno: aggiungi ?ora=23:30 all'indirizzo</li>
+          <li>Apertura pulita dall'ultima posizione nota, senza salti; niente più richiesta di orientamento</li>
         </ul>
       </div>
       <div class="stage-item">
@@ -397,6 +404,7 @@ body.deep .deep-badge { display: block; }
     <p class="muted">Tieni premuto l'immagine per salvarla nelle Foto o condividerla.</p>
   </div>
 
+  <div id="splash" aria-hidden="true"><span>COLUMBUS</span></div>
   <div id="toast" role="status"></div>
 
   <div id="gate" hidden>
@@ -421,6 +429,7 @@ function showFatal(message) {
   const box = document.getElementById('fatal');
   const msg = document.getElementById('fatalMsg');
   if (!box || !msg) return;
+  const splash = document.getElementById('splash'); if (splash) splash.classList.add('gone');
   message = String(message).replace(/access_token=[^&\s]+/g, 'access_token=…');
   if (msg.textContent.includes(message)) return; // niente ripetizioni
   msg.textContent = (msg.textContent ? msg.textContent + '\n' : '') + message;
@@ -446,6 +455,7 @@ window.addEventListener('unhandledrejection', (e) => {
 
   const token = EMBEDDED_TOKEN.startsWith('pk.') ? EMBEDDED_TOKEN : (loadRaw('columbus-token') || '');
   if (!token) {
+    $('#splash').classList.add('gone');
     $('#gate').hidden = false;
     $('#saveToken').onclick = () => {
       const v = $('#tokenInput').value.trim();
@@ -456,7 +466,9 @@ window.addEventListener('unhandledrejection', (e) => {
   if (typeof mapboxgl === 'undefined') { showFatal('La libreria Mapbox GL JS non si è caricata (api.mapbox.com non raggiungibile o bloccato).'); return; }
 
   // ---------- Stato ----------
-  const state = { phase: 'browse', origin: DEFAULT_CENTER, dest: null, routes: [], sel: 0, sim: null, orbit: null, section: 0, lightMode: load('columbus-light', 'auto'), glare: {}, logMonth: null, sample: null, saved: false };
+  const LAST_POS = load('columbus-last-pos', null); // ultima posizione buona vista su questo telefono
+  const START = Array.isArray(LAST_POS) && LAST_POS.length === 2 ? LAST_POS : DEFAULT_CENTER;
+  const state = { phase: 'browse', origin: START, dest: null, routes: [], sel: 0, sim: null, orbit: null, section: 0, lightMode: load('columbus-light', 'auto'), glare: {}, logMonth: null, sample: null, saved: false };
   const SECTIONS = ['NAVIGA', 'ROTTE', 'DIARIO'];
 
   // ---------- Utilità ----------
@@ -552,7 +564,7 @@ window.addEventListener('unhandledrejection', (e) => {
     map = new mapboxgl.Map({
       container: 'map', style: 'mapbox://styles/mapbox/standard',
       config: { basemap: { lightPreset: 'night', showPointOfInterestLabels: true } },
-      center: DEFAULT_CENTER, zoom: 15.6, pitch: 60, bearing: -20, language: 'it'
+      center: START, zoom: 15.6, pitch: 60, bearing: -20, language: 'it'
     });
   } catch (e) { showFatal('Creazione della mappa: ' + (e && e.message ? e.message : String(e))); return; }
   let mapLoaded = false;
@@ -693,7 +705,7 @@ window.addEventListener('unhandledrejection', (e) => {
   const puckEl = document.createElement('div');
   puckEl.className = 'puck';
   puckEl.innerHTML = '<div class="halo"></div><div class="ring"></div><svg width="36" height="40" viewBox="0 0 36 40"><defs><linearGradient id="pk" x1="0" x2="1"><stop offset="0" stop-color="#B98F3E"/><stop offset=".5" stop-color="#C9A04E"/><stop offset=".5" stop-color="#F3D58C"/><stop offset="1" stop-color="#FFF1CC"/></linearGradient></defs><path d="M18 2 L33 36 L18 28 L3 36 Z" fill="url(#pk)" stroke="#FFF4D6" stroke-width="1" stroke-linejoin="round"/></svg>';
-  const puck = new mapboxgl.Marker({ element: puckEl, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(DEFAULT_CENTER).addTo(map);
+  const puck = new mapboxgl.Marker({ element: puckEl, rotationAlignment: 'map', pitchAlignment: 'map' }).setLngLat(START).addTo(map);
   const pinEl = document.createElement('div');
   pinEl.innerHTML = '<svg class="pin" viewBox="0 0 40 52"><defs><linearGradient id="pn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF1CC"/><stop offset="1" stop-color="#C9A04E"/></linearGradient></defs><path d="M20 51 C20 51 3 32 3 19 a17 17 0 0 1 34 0 c0 13 -17 32 -17 32z" fill="url(#pn)" stroke="#FFF4D6" stroke-width="1.2"/><circle cx="20" cy="19" r="6" fill="#0C1320"/></svg>';
   const pin = new mapboxgl.Marker({ element: pinEl, anchor: 'bottom' });
@@ -705,21 +717,40 @@ window.addEventListener('unhandledrejection', (e) => {
     map.flyTo({ center: state.origin, zoom: 15.6, pitch: 60, bearing: -20, padding: { top: 120, bottom: 240, left: 0, right: 0 }, duration });
   }
   // Posizione seguita in continuo. Direzione della freccia:
-  // in movimento la direzione di marcia del GPS, da fermo la bussola del telefono.
+  // la direzione di marcia del GPS (da fermo resta l'ultima). Nessuna richiesta di permessi extra.
   const heading = { course: null, compass: null, shown: 0 };
-  let firstFix = true;
+  // Apertura pulita: la mappa resta coperta finché non c'è una posizione precisa (al massimo 4 s),
+  // così non si vede il salto da una posizione approssimata a quella vera.
+  const PRECISE = 150; // metri
+  let splashOpen = true, cameraPrecise = false, hadFix = false;
+  function hideSplash() { if (!splashOpen) return; splashOpen = false; $('#splash').classList.add('gone'); }
+  setTimeout(hideSplash, 4000);
+  function placeCamera(animated) {
+    if (state.phase !== 'browse' || state.section !== 0) return;
+    if (animated) browseCamera(1200);
+    else map.jumpTo({ center: state.origin, zoom: 15.6, pitch: 60, bearing: -20, padding: { top: 120, bottom: 240, left: 0, right: 0 } });
+  }
   if (navigator.geolocation) {
     navigator.geolocation.watchPosition((pos) => {
       const c = pos.coords;
+      const precise = (c.accuracy || 9999) <= PRECISE;
       state.origin = [c.longitude, c.latitude];
-      heading.course = (typeof c.heading === 'number' && !isNaN(c.heading) && (c.speed || 0) > 1) ? c.heading : null;
+      if (typeof c.heading === 'number' && !isNaN(c.heading) && (c.speed || 0) > 1) heading.course = c.heading;
       if (!state.sim) puck.setLngLat(state.origin);
-      if (firstFix) {
-        firstFix = false;
-        applyLight();
-        if (state.phase === 'browse' && state.section === 0) browseCamera(2400);
+      if (!hadFix) { hadFix = true; applyLight(); }
+      if (precise) {
+        store('columbus-last-pos', [+c.longitude.toFixed(5), +c.latitude.toFixed(5)]);
+        if (!cameraPrecise) {
+          cameraPrecise = true;
+          placeCamera(!splashOpen); // sotto la copertina: salto istantaneo; dopo: breve volo
+          setTimeout(hideSplash, 350);
+        }
+      } else if (!cameraPrecise && !LAST_POS && splashOpen) {
+        placeCamera(false); // primissimo avvio: meglio una posizione approssimata che Milano
       }
-    }, () => { if (firstFix) toast('Posizione non disponibile: parto da Milano, piazza del Duomo.'); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 });
+    }, () => { hideSplash(); if (!hadFix) toast('Posizione non disponibile: riparto dall\'ultima posizione nota.'); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 });
+  } else {
+    hideSplash();
   }
   function onOrientation(e) {
     let h = null;
@@ -731,12 +762,8 @@ window.addEventListener('unhandledrejection', (e) => {
   }
   window.addEventListener('deviceorientationabsolute', onOrientation);
   window.addEventListener('deviceorientation', onOrientation);
-  // Su iPhone la bussola richiede un permesso, che Safari può chiedere solo dopo un tocco.
-  document.addEventListener('click', () => {
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      DeviceOrientationEvent.requestPermission().catch(() => {});
-    }
-  }, { once: true });
+  // Nessuna richiesta di permesso per l'orientamento: la bussola si usa solo dove il browser
+  // la fornisce senza chiedere (Android). Su iPhone la freccia segue la direzione di marcia.
   (function rotatePuck() {
     if (!state.sim) {
       const h = heading.course !== null ? heading.course : heading.compass;
