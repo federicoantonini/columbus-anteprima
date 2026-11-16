@@ -719,13 +719,14 @@ window.addEventListener('unhandledrejection', (e) => {
   try {
     map = new mapboxgl.Map({
       container: 'map', style: 'mapbox://styles/mapbox/standard',
-      config: { basemap: { lightPreset: 'night', showPointOfInterestLabels: true } },
+      // show3dFacades: facciate 3D degli edifici con le finestre (di notte alcune sono accese).
+      config: { basemap: { lightPreset: 'night', showPointOfInterestLabels: true, show3dFacades: true } },
       center: START, zoom: 15.6, pitch: 60, bearing: -20, language: 'it'
     });
   } catch (e) { showFatal('Creazione della mappa: ' + (e && e.message ? e.message : String(e))); return; }
   let mapLoaded = false;
   // La mappa è "partita" appena arriva lo stile; le tessere 3D possono richiedere più tempo.
-  map.on('style.load', () => { mapLoaded = true; });
+  map.on('style.load', () => { mapLoaded = true; try { map.setConfigProperty('basemap', 'show3dFacades', true); } catch (e) {} });
   map.on('load', () => { mapLoaded = true; });
   map.on('error', (e) => {
     const err = (e && e.error) || {};
