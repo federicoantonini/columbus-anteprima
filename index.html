@@ -1100,7 +1100,8 @@ window.addEventListener('unhandledrejection', (e) => {
     document.body.classList.toggle('deep', deep);
     try {
       if (map.getLayer('columbus-veil')) {
-        map.setLayoutProperty('columbus-veil', 'visibility', depth > 0 ? 'visible' : 'none');
+        // Il velo della notte fonda è per la mappa classica: sulle foto satellitari no.
+        map.setLayoutProperty('columbus-veil', 'visibility', depth > 0 && !state.satellite ? 'visible' : 'none');
         map.setPaintProperty('columbus-veil', 'fill-opacity', +(DEEP_VEIL * depth).toFixed(3));
       }
     } catch (e) {}
