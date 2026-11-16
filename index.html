@@ -129,7 +129,38 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 #results { flex: 1; overflow-y: auto; }
 #results:empty { display: none; }
 /* Nella ricerca la mappa è coperta: logo e attribuzione non devono finire sopra l'elenco. */
-body[data-phase="search"] .mapboxgl-ctrl-bottom-left, body[data-phase="search"] .mapboxgl-ctrl-bottom-right { visibility: hidden; }
+body[data-phase="search"] .mapboxgl-ctrl-bottom-left, body[data-phase="search"] .mapboxgl-ctrl-bottom-right,
+body[data-phase="browse"][data-panel="soft"] .mapboxgl-ctrl-bottom-left, body[data-phase="browse"][data-panel="soft"] .mapboxgl-ctrl-bottom-right,
+body[data-phase="browse"][data-panel="solid"] .mapboxgl-ctrl-bottom-left, body[data-phase="browse"][data-panel="solid"] .mapboxgl-ctrl-bottom-right { visibility: hidden; }
+/* Ricerca lungo il percorso (in guida) */
+#nav .sar-btn { position: absolute; right: 20px; bottom: calc(var(--bottom) + 64px); width: 48px; height: 48px; background: rgba(7,10,16,0.82); box-shadow: 0 6px 18px rgba(0,0,0,0.45); }
+#nav .sim { right: auto; left: 26px; }
+body[data-sar="open"] #nav .sar-btn { display: none; }
+.trip > span, .trip > small { white-space: nowrap; }
+body[data-phase="nav"] #toast { top: auto; bottom: calc(var(--bottom) + 124px); }
+.trip .sar-btn + .end { margin-left: 0; }
+.sar-sheet { margin: 0 4px calc(var(--bottom) + 6px); max-height: 48%; display: flex; flex-direction: column; gap: 12px; padding: 18px 18px 8px; border-radius: 26px; background: rgba(10,13,19,0.97); border: 1px solid rgba(233,196,106,0.38); box-shadow: 0 -10px 40px rgba(0,0,0,0.55); }
+.sar-head { display: flex; align-items: flex-start; gap: 12px; }
+.sar-head > div { flex: 1; min-width: 0; }
+.sar-head h2 { margin: 4px 0 0; font-family: var(--serif); font-weight: 500; font-size: 26px; line-height: 1.1; }
+.sar-head .close { width: 38px; height: 38px; color: var(--bone); background: rgba(21,27,37,0.95); border-color: #2A313C; }
+.sar-cats { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex: none; }
+.sar-cats::-webkit-scrollbar { display: none; }
+.sar-cats .chip { flex: none; height: 38px; padding: 0 14px; font-size: 13px; color: var(--bone); }
+.sar-cats .chip svg { color: var(--gold-light); }
+.sar-cats .chip[aria-pressed="true"] { background: rgba(233,196,106,0.14); border-color: var(--gold-light); color: var(--gold-light); }
+.sar-sheet .list { overflow-y: auto; min-height: 0; -webkit-overflow-scrolling: touch; }
+.sar-sheet .result:last-child { border-bottom: 0; }
+.sar-sheet .hint { padding: 10px 0 14px; }
+.result .detour { color: var(--gold-soft); }
+.sar-pick { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 12px; }
+.sar-pick h3 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 24px; line-height: 1.1; }
+.sar-pick p { margin: 0; font-size: 14px; color: var(--secondary); }
+.sar-pick .row { display: flex; gap: 10px; margin-top: 10px; }
+.sar-pick .go { flex: 1; min-width: 0; height: 50px; padding: 0 14px; white-space: nowrap; font-size: 16px; }
+.sar-pick .small-btn { flex: none; height: 50px; border-radius: 25px; }
+body[data-sar="open"] #nav .trip, body[data-sar="open"] #nav .sim { display: none; }
+.stop-pin { width: 22px; height: 22px; border-radius: 50%; background: #0C1320; border: 2px solid var(--gold-light); box-shadow: 0 0 0 4px rgba(243,213,140,0.2); }
 .result { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 0; background: none; border: 0; border-bottom: 1px solid #1A2029; text-align: left; }
 .result .ic { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--raised); display: flex; align-items: center; justify-content: center; color: var(--gold); }
 .result b { display: block; font-weight: 500; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -411,6 +442,14 @@ body.deep .deep-badge { display: block; }
     </div>
     <div class="sun-now" id="sunNow" hidden><span style="color: var(--sun)">☀︎</span> Sole basso davanti a te</div>
     <div class="spacer"></div>
+    <div class="sar-sheet" id="sarSheet" hidden>
+      <div class="sar-head">
+        <div><div class="kicker">Sul percorso</div><h2 id="sarTitle">Cosa cerchi?</h2></div>
+        <button class="round close" id="sarClose" aria-label="Chiudi la ricerca"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="sar-cats" id="sarCats"></div>
+      <div class="list" id="sarList"></div>
+    </div>
     <div class="sim">SIMULAZIONE ×4</div>
     <div class="trip">
       <span class="eta" id="eta"></span><small>arrivo</small>
@@ -418,6 +457,7 @@ body.deep .deep-badge { display: block; }
       <span class="dot"></span><span id="remKm"></span>
       <button class="end" id="end">Fine</button>
     </div>
+    <button class="round gold sar-btn" id="sarBtn" aria-label="Cerca sul percorso"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></button>
   </section>
 
   <!-- Arrivo -->
@@ -1901,7 +1941,7 @@ window.addEventListener('unhandledrejection', (e) => {
     const cum = [0];
     for (let i = 1; i < c.length; i++) cum.push(cum[i - 1] + dist(c[i - 1], c[i]));
     let idx = 0;
-    const steps = route.legs[0].steps.map((s) => {
+    const steps = route.legs.flatMap((l) => l.steps).map((s) => {
       const loc = s.maneuver.location;
       let best = idx, bd = Infinity;
       for (let i = idx; i < c.length; i++) { const d = dist(c[i], loc); if (d < bd) { bd = d; best = i; } if (bd < 15 && d > bd + 200) break; }
@@ -1933,7 +1973,9 @@ window.addEventListener('unhandledrejection', (e) => {
     if (len > 2) { const diff = ((bearingOf(a, b) - s.bearing + 540) % 360) - 180; s.bearing = (s.bearing + diff * Math.min(1, dt * 2.5) + 360) % 360; }
     puck.setLngLat(pos).setRotation(s.bearing);
     if (!s.lastLook || now - s.lastLook > 1000) { s.lastLook = now; upgradeDestLight(); }
-    map.jumpTo({ center: pos, bearing: s.bearing, pitch: 62, zoom: 17, padding: { top: 330, bottom: 150, left: 0, right: 0 } });
+    s.pos = pos;
+    if (!state.sar) map.jumpTo({ center: pos, bearing: s.bearing, pitch: 62, zoom: 17, padding: { top: 330, bottom: 150, left: 0, right: 0 } });
+    if (state.stop && s.t > state.stop.at + 30) { state.stop.marker.remove(); state.stop = null; } // tappa superata
     setTrim(s.t / s.p.total);
     hud(s, pos);
     if (s.t >= s.p.total) { arrive(); return; }
@@ -1989,9 +2031,185 @@ window.addEventListener('unhandledrejection', (e) => {
   }
   $('#end').onclick = reset;
 
+  // ---------- Ricerca lungo il percorso (in guida) ----------
+  // Cerca una categoria lungo il tratto che manca (servizio Search Box "search along route":
+  // risultati raggiungibili con una deviazione massima di qualche minuto), li mostra in ordine
+  // di strada e permette di aggiungerne uno come tappa.
+  const SAR_DETOUR_MIN = 5;
+  function encodePolyline6(coords) { // [lng, lat] → stringa "polyline6" (lat, lng con 6 decimali)
+    let out = '', pLat = 0, pLng = 0;
+    const enc = (v) => { v = v < 0 ? ~(v << 1) : v << 1; let r = ''; while (v >= 0x20) { r += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; } return r + String.fromCharCode(v + 63); };
+    for (const [lng, lat] of coords) {
+      const la = Math.round(lat * 1e6), ln = Math.round(lng * 1e6);
+      out += enc(la - pLat) + enc(ln - pLng); pLat = la; pLng = ln;
+    }
+    return out;
+  }
+  // Il tratto davanti all'auto (fino a 60 km), alleggerito a non più di 250 punti.
+  function routeAhead(s, maxMeters = 60000) {
+    const c = s.p.c, cum = s.p.cum, pts = [s.pos || c[s.seg]];
+    for (let i = s.seg + 1; i < c.length && cum[i] - s.t <= maxMeters; i++) pts.push(c[i]);
+    if (pts.length < 2) pts.push(c[c.length - 1]);
+    const step = Math.ceil(pts.length / 250);
+    return pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
+  }
+  // Dove cade un luogo lungo il percorso: metri dall'inizio e distanza dalla strada.
+  function alongRoute(s, coord) {
+    let best = { at: 0, off: Infinity };
+    const c = s.p.c, cum = s.p.cum;
+    for (let i = 0; i < c.length - 1; i++) {
+      const a = c[i], b = c[i + 1];
+      const kx = 111320 * Math.cos(a[1] * toR), ky = 110540;
+      const bx = (b[0] - a[0]) * kx, by = (b[1] - a[1]) * ky, px = (coord[0] - a[0]) * kx, py = (coord[1] - a[1]) * ky;
+      const L2 = bx * bx + by * by;
+      const f = L2 ? Math.max(0, Math.min(1, (px * bx + py * by) / L2)) : 0;
+      const off = Math.hypot(px - bx * f, py - by * f);
+      if (off < best.off) best = { at: cum[i] + (cum[i + 1] - cum[i]) * f, off };
+    }
+    return best;
+  }
+  CATEGORIES.forEach((c) => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.dataset.cat = c.key;
+    b.innerHTML = iconSvg(c.icon, 15) + '<span>' + esc(c.label) + '</span>';
+    b.onclick = () => searchAlongRoute(c);
+    $('#sarCats').appendChild(b);
+  });
+  const sarMarkers = [];
+  function clearSarPins() { sarMarkers.splice(0).forEach((m) => m.remove()); }
+  function openSar() {
+    if (!state.sim) return;
+    state.sar = { cat: null, items: [], pick: null };
+    document.body.dataset.sar = 'open';
+    $('#sarSheet').hidden = false;
+    $('#sarTitle').textContent = 'Cosa cerchi?';
+    $('#sarList').innerHTML = '<div class="hint">Scegli una categoria: cerco lungo la strada che ti manca.</div>';
+    $('#sarCats').querySelectorAll('.chip').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+    sarCamera();
+  }
+  function closeSar() {
+    state.sar = null;
+    document.body.dataset.sar = '';
+    $('#sarSheet').hidden = true;
+    clearSarPins();
+    liftMapControls(null);
+  }
+  $('#sarBtn').onclick = openSar;
+  $('#sarClose').onclick = closeSar;
+  // Vista dall'alto del tratto davanti (e dei risultati), nello spazio sopra la scheda.
+  function sarCamera() {
+    const s = state.sim; if (!s || !state.sar) return;
+    const items = state.sar.items.slice(0, 6).map((x) => x.coord);
+    const ahead = routeAhead(s, items.length ? 60000 : 8000);
+    requestAnimationFrame(() => fitPoints(ahead.concat(items), $('#nav .hud-top'), $('#sarSheet'), 900, { pitch: 35, maxZoom: 16, rotate: true }));
+  }
+  async function searchAlongRoute(cat) {
+    const s = state.sim; if (!s || !state.sar) return;
+    const seq = ++searchSeq;
+    state.sar = { cat, items: [], pick: null };
+    $('#sarCats').querySelectorAll('.chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cat === cat.key)));
+    $('#sarTitle').textContent = cat.title + ' sul percorso';
+    $('#sarList').innerHTML = '<div class="hint">Cerco lungo la strada…</div>';
+    clearSarPins();
+    try {
+      const route = encodePolyline6(routeAhead(s));
+      const ids = await categoryIdsFor(cat);
+      let feats = [], lastError = null;
+      for (const id of ids) {
+        const url = 'https://api.mapbox.com/search/searchbox/v1/category/' + encodeURIComponent(id) + '?language=it&limit=25&sar_type=isochrone&route_geometry=polyline6&time_deviation=' + SAR_DETOUR_MIN + '&route=' + encodeURIComponent(route) + '&access_token=' + token;
+        const res = await fetch(url);
+        if (!res.ok) { lastError = new Error('HTTP ' + res.status); if (res.status === 401 || res.status === 403 || res.status === 429) break; continue; }
+        feats = (await res.json()).features || [];
+        lastError = null;
+        if (feats.length) break;
+      }
+      if (lastError) throw lastError;
+      if (seq !== searchSeq || !state.sar || state.sar.cat !== cat) return;
+      const items = feats.map((f) => {
+        const pl = placeFromFeature(f);
+        const where = alongRoute(state.sim, pl.coord);
+        // Deviazione stimata: andata e ritorno dalla strada a passo cittadino (~30 km/h), più un minuto di sosta in strada.
+        return Object.assign(pl, { at: where.at, ahead: where.at - state.sim.t, off: where.off, detour: Math.max(1, Math.round((2 * where.off) / 8.3 / 60)) });
+      }).filter((x) => x.ahead > 60).sort((a, b) => a.ahead - b.ahead).slice(0, 12);
+      state.sar.items = items;
+      renderSar();
+      sarCamera();
+    } catch (e) {
+      if (seq !== searchSeq || !state.sar) return;
+      $('#sarList').innerHTML = '<div class="hint">Ricerca non riuscita (' + esc(e.message) + ').</div>';
+    }
+  }
+  function renderSar() {
+    const sar = state.sar; if (!sar) return;
+    const list = $('#sarList');
+    clearSarPins();
+    sar.items.forEach((pl, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'cat-pin-wrap';
+      wrap.innerHTML = '<button class="cat-pin' + (sar.pick === i ? ' sel' : '') + '" aria-label="' + esc(pl.name) + '">' + iconSvg(sar.cat.icon, 15) + '</button>';
+      wrap.firstChild.onclick = (e) => { e.stopPropagation(); pickSar(i); };
+      sarMarkers.push(new mapboxgl.Marker({ element: wrap }).setLngLat(pl.coord).addTo(map));
+    });
+    if (sar.pick !== null && sar.items[sar.pick]) {
+      const pl = sar.items[sar.pick];
+      list.innerHTML = '<div class="sar-pick"><h3>' + esc(pl.name) + '</h3><p>' + esc(pl.address || pl.category) + '</p><p>Tra ' + fmtKm(pl.ahead) + ' · <span class="detour">deviazione circa +' + pl.detour + ' min</span></p>' +
+        '<div class="row"><button class="go" id="sarAdd"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0A0D12" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3L14 21z"/></svg>Aggiungi tappa</button><button class="small-btn" id="sarBack">Indietro</button></div></div>';
+      $('#sarAdd').onclick = () => addStop(pl);
+      $('#sarBack').onclick = () => { sar.pick = null; renderSar(); };
+      return;
+    }
+    if (!sar.items.length) { list.innerHTML = '<div class="hint">Nessun risultato entro ' + SAR_DETOUR_MIN + ' minuti di deviazione.</div>'; return; }
+    list.innerHTML = '';
+    sar.items.forEach((pl, i) => {
+      const b = document.createElement('button');
+      b.className = 'result';
+      const st = openStatus(pl.hours);
+      b.innerHTML = '<span class="ic">' + iconSvg(sar.cat.icon, 17) + '</span><div><b>' + esc(pl.name) + '</b><span class="sub"><span class="detour">+' + pl.detour + ' min</span> · ' + esc(pl.address || pl.category) + '</span>' + (st ? '<span class="status"><i style="background:' + (st.open ? 'var(--green)' : 'var(--red)') + '"></i>' + esc(st.text) + '</span>' : '') + '</div><span class="km">tra ' + fmtKm(pl.ahead) + '</span>';
+      b.onclick = () => pickSar(i);
+      list.appendChild(b);
+    });
+    list.scrollTop = 0;
+  }
+  function pickSar(i) {
+    if (!state.sar) return;
+    state.sar.pick = i;
+    renderSar();
+    const pl = state.sar.items[i];
+    requestAnimationFrame(() => fitPoints([state.sim.pos || state.origin, pl.coord], $('#nav .hud-top'), $('#sarSheet'), 800, { pitch: 40, maxZoom: 16.5, rotate: true }));
+  }
+  // Aggiunge la tappa: nuovo percorso da qui alla tappa e poi alla destinazione.
+  async function addStop(pl) {
+    const s = state.sim; if (!s) return;
+    const btn = $('#sarAdd'); if (btn) { btn.disabled = true; btn.lastChild.textContent = 'Ricalcolo…'; }
+    try {
+      const from = s.pos || s.p.c[s.seg];
+      const res = await fetch('https://api.mapbox.com/directions/v5/mapbox/driving-traffic/' + [from, pl.coord, state.dest.coord].map((c) => c.join(',')).join(';') + '?geometries=geojson&overview=full&steps=true&language=it&annotations=congestion&access_token=' + token);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const r = data.routes && data.routes[0];
+      if (!r) throw new Error(data.message || 'nessun percorso');
+      const before = s.r.duration * (s.p.total - s.t) / s.p.total;
+      const added = Math.max(0, Math.round((r.duration - before) / 60));
+      closeSar();
+      if (state.stop) state.stop.marker.remove();
+      const el = document.createElement('div'); el.className = 'stop-pin';
+      const p = prepare(r);
+      state.stop = { place: pl, at: (r.legs[0] && r.legs[0].distance) || 0, marker: new mapboxgl.Marker({ element: el }).setLngLat(pl.coord).addTo(map) };
+      state.routes = [r]; state.sel = 0;
+      Object.assign(s, { r, p, t: 0, seg: 0, lastDist: '' });
+      drawRoutes();
+      toast('Tappa aggiunta: ' + pl.name + (added ? ' · +' + added + ' min' : '') + '.');
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.lastChild.textContent = 'Aggiungi tappa'; }
+      toast('Non riesco ad aggiungere la tappa (' + e.message + ').');
+    }
+  }
+
   // ---------- Arrivo ----------
   function arrive() {
     const s = state.sim;
+    if (state.sar) closeSar();
     cancelAnimationFrame(s.raf);
     show('arrival');
     $('#saveLabel').textContent = 'Salva nel diario';
@@ -2027,6 +2245,8 @@ window.addEventListener('unhandledrejection', (e) => {
     stopWave();
     clearCategoryPins(); state.category = null;
     hideDestLight(); destLight.cache = null;
+    if (state.sar) closeSar();
+    if (state.stop) { state.stop.marker.remove(); state.stop = null; }
     state.sim = null; state.orbit = null; state.routes = []; state.dest = null; state.trim = 0;
     pin.remove(); beacon.remove();
     $('#starMenu').hidden = true;
