@@ -214,33 +214,12 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 .stage-item ul { margin: 6px 0 0; padding-left: 18px; color: var(--secondary); font-size: 14px; line-height: 1.6; }
 .stage-item a { color: var(--gold); font-size: 13px; }
 
-/* Notte profonda: quasi tutto nero, oro attenuato, niente bianchi brillanti */
+/* Notte profonda: si scurisce solo la mappa; scritte e comandi restano come sempre. */
 body.deep #phone { background: #000; }
-body.deep .shade.top { background: linear-gradient(180deg, rgba(0,0,0,0.96), rgba(0,0,0,0)); }
-body.deep .shade.bottom { background: linear-gradient(0deg, rgba(0,0,0,0.97), rgba(0,0,0,0)); }
-body.deep .wordmark, body.deep .kicker { color: #8A7D60; }
-body.deep .where span { color: #9C8F72; }
-body.deep .where { border-bottom-color: rgba(156,126,62,0.35); }
-body.deep .where svg, body.deep .news-btn { color: #9C7E3E; border-color: rgba(156,126,62,0.4); }
-body.deep .light { background: rgba(0,0,0,0.85); border-color: #1d1b17; }
-body.deep .light button { color: #8A7D60; }
-body.deep .light button[aria-pressed="true"] { color: #C9A85E; background: rgba(156,126,62,0.14); border-color: rgba(156,126,62,0.45); }
-body.deep .sunline, body.deep .sunline b { color: #8A7D60; }
-body.deep .sextant { filter: brightness(0.62) saturate(0.8); }
-body.deep .puck { filter: brightness(0.7) saturate(0.85); }
-body.deep .odo, body.deep .dist { color: #B89B5E; }
-body.deep .unit { color: #8A7D60; }
-body.deep .instruction { color: #9C8F72; }
-body.deep .then, body.deep .trip, body.deep .trip small { color: #8A7D60; }
-body.deep .trip .eta { color: #B89B5E; }
-body.deep .trip .dot { background: #6a5a38; }
-body.deep .maneuver { color: #B89B5E; }
-body.deep .end { background: #000; border-color: rgba(229,72,77,0.35); color: #9C8F72; }
-body.deep .sim { color: #5f5745; }
-body.deep .go { background: linear-gradient(180deg, #B89B5E, #9C7E3E); box-shadow: none; }
-body.deep .option, body.deep .glare, body.deep .chip { background: rgba(0,0,0,0.9); }
-body.deep .mapboxgl-ctrl-logo, body.deep .mapboxgl-ctrl-attrib { opacity: 0.45; }
-.deep-badge { display: none; align-self: flex-start; margin-bottom: 10px; font-size: 10px; letter-spacing: .32em; color: #8A7D60; }
+body.deep .shade.top { background: linear-gradient(180deg, rgba(0,0,0,0.92), rgba(0,0,0,0)); }
+body.deep .shade.bottom { background: linear-gradient(0deg, rgba(0,0,0,0.95), rgba(0,0,0,0)); }
+body.deep .puck { filter: brightness(0.8); }
+.deep-badge { display: none; align-self: flex-start; margin-bottom: 10px; font-size: 10px; letter-spacing: .32em; color: var(--gold-dim); }
 body.deep .deep-badge { display: block; }
 
 #toast { position: absolute; left: 20px; right: 20px; top: calc(var(--top) + 120px); padding: 14px 16px; border-radius: 16px; background: rgba(14,19,27,0.96); border: 1px solid rgba(233,196,106,0.5); font-size: 14px; line-height: 1.4; opacity: 0; transform: translateY(-6px); transition: all .3s ease; pointer-events: none; z-index: 6; }
@@ -363,7 +342,7 @@ body.deep .deep-badge { display: block; }
         <ul>
           <li>La notte di Mapbox con gli edifici appena più scuri</li>
           <li>Terreno, parchi e acqua velati di scuro; le strade restano luminose</li>
-          <li>Filo d'oro e testi in oro attenuato</li>
+          <li>Scritte e comandi con la luminosità di sempre; filo d'oro attenuato</li>
         </ul>
       </div>
       <div class="stage-item">
@@ -639,9 +618,9 @@ window.addEventListener('unhandledrejection', (e) => {
       { id: 'columbus-sun', type: 'directional', properties: { color: L.sun, intensity: L.sunI, direction: [+az.toFixed(1), +polar.toFixed(1)], 'cast-shadows': true, 'shadow-intensity': +(0.4 + 0.6 * k).toFixed(3) } }
     ];
   }
-  // Notte profonda: la notte di Mapbox, con gli edifici appena più scuri (luci -15%)
+  // Notte profonda: la notte di Mapbox, con gli edifici appena più scuri (luci -20%)
   // e tutto il resto, tranne le strade, velato di scuro.
-  const DEEP_DIM = 0.85;
+  const DEEP_DIM = 0.8;
   function deepLights() {
     if (!standardNightLights) return null;
     return standardNightLights.map((l) => {
@@ -652,7 +631,7 @@ window.addEventListener('unhandledrejection', (e) => {
     });
   }
   // Velo scuro sopra terreno, parchi e acqua ma sotto strade ed edifici (slot "bottom" di Mapbox Standard).
-  const DEEP_VEIL = 0.28;
+  const DEEP_VEIL = 0.33;
   function addDeepVeil() {
     try {
       if (!map.getSource('columbus-veil')) map.addSource('columbus-veil', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]]] } } });
