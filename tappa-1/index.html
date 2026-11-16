@@ -368,6 +368,8 @@ window.addEventListener('unhandledrejection', (e) => {
     return;
   }
   let mapLoaded = false;
+  // La mappa è "partita" appena arriva lo stile; le tessere 3D possono richiedere più tempo.
+  map.on('style.load', () => { mapLoaded = true; });
   map.on('load', () => { mapLoaded = true; });
   map.on('error', (e) => {
     const err = (e && e.error) || {};
@@ -378,9 +380,7 @@ window.addEventListener('unhandledrejection', (e) => {
       showFatal('Errore nel caricare la mappa: ' + (err.message || 'sconosciuto') + (err.url ? '\n' + String(err.url).split('?')[0] : ''));
     }
   });
-  setTimeout(() => {
-    if (!mapLoaded) showFatal('La mappa non ha ricevuto dati da Mapbox entro 15 secondi. Questo visualizzatore potrebbe bloccare le connessioni verso api.mapbox.com.');
-  }, 15000);
+  setTimeout(() => { if (!mapLoaded) toast('La mappa ci sta mettendo più del solito a caricare: controlla la connessione.'); }, 30000);
 
   const EMPTY = { type: 'FeatureCollection', features: [] };
   const DASHES = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0], [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]];
