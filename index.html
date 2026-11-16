@@ -2111,7 +2111,7 @@ window.addEventListener('unhandledrejection', (e) => {
   // e restano in memoria sul telefono: le stesse frasi non si pagano due volte.
   const voice = {
     muted: load('columbus-voice-muted', false),
-    name: loadRaw('columbus-voice-name') || '',
+    name: loadRaw('columbus-voice-name') || 'it-IT-Chirp3-HD-Algenib', // la voce di Columbus
     key: loadRaw('columbus-google-key') || '',
     el: new Audio(), urls: new Map(), pending: new Map(), unlocked: false, token: 0,
     unlock() {
@@ -2222,7 +2222,7 @@ window.addEventListener('unhandledrejection', (e) => {
       if (!res.ok) { let msg = 'HTTP ' + res.status; try { msg = (await res.json()).error.message || msg; } catch (e) {} throw new Error(msg); }
       const voices = ((await res.json()).voices || []).filter((v) => /Chirp3-HD/i.test(v.name)).sort((a, b) => a.name.localeCompare(b.name));
       if (!voices.length) throw new Error('nessuna voce Chirp 3 HD in italiano');
-      if (!voice.name) { voice.name = voices[0].name; try { localStorage.setItem('columbus-voice-name', voice.name); } catch (e) {} }
+      if (!voice.name) { voice.name = (voices.find((v) => /Algenib$/.test(v.name)) || voices[0]).name; try { localStorage.setItem('columbus-voice-name', voice.name); } catch (e) {} }
       $('#voiceHint').textContent = 'Tocca il triangolo per ascoltare, poi scegli la voce di Columbus.';
       list.innerHTML = voices.map((v) => {
         const short = v.name.split('-').pop();
