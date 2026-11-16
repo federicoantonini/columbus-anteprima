@@ -290,14 +290,19 @@ body[data-sar="open"] #nav .recenter { display: none; }
 .hud-top { display: flex; align-items: flex-start; gap: 10px; }
 .hud-top > div { flex: 1; min-width: 0; }
 .dist { display: flex; align-items: baseline; gap: 6px; font-family: var(--serif); color: var(--gold-light); }
-.odo { display: flex; height: 1em; overflow: hidden; line-height: 1; font-size: 92px; font-weight: 500; font-variant-numeric: lining-nums tabular-nums; }
-.odo .col { height: 1em; overflow: hidden; }
+.odo { display: flex; height: 1em; overflow: hidden; line-height: 1; font-size: 78px; font-weight: 500; font-variant-numeric: lining-nums tabular-nums; }
+.odo .col { height: 1em; overflow: hidden; padding: 0 .045em; } /* le cifre del Bodoni sono larghe: un filo d'aria tra l'una e l'altra */
 .odo .strip2 { display: flex; flex-direction: column; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
 .odo .strip2 span, .odo .sep { height: 1em; display: block; }
-.unit { font-size: 34px; font-style: italic; color: var(--gold-soft); }
-.maneuver-box { flex: none; margin-top: 26px; width: 92px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.odo .sep { margin: 0 -.03em; }
+.unit { font-size: 30px; font-style: italic; color: var(--gold-soft); }
+.maneuver-box { flex: none; margin-top: 22px; width: 132px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .maneuver { color: var(--gold-light); }
-.m-label { font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--gold-light); text-align: center; line-height: 1.2; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+.m-label { max-width: 100%; font-family: var(--serif); font-size: 19px; color: var(--bone); text-align: center; line-height: 1.12; text-shadow: 0 1px 8px rgba(0,0,0,.9); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* La "notte fonda" non serve in guida: più spazio alle indicazioni. */
+#nav .deep-badge { display: none !important; }
+/* Compatto: niente frase sotto la distanza (la via è sotto il simbolo). */
+body:not([data-hud="verbose"]) #nav .instruction { display: none; }
 /* Compatto (predefinito): sotto la distanza solo la via. Esteso: la frase intera, più piccola e su fondo scuro. */
 .instruction { margin: 4px 0 0; font-family: var(--serif); font-size: 28px; line-height: 1.1; text-shadow: 0 1px 10px rgba(0,0,0,.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body[data-hud="verbose"] .instruction { font-style: italic; font-size: 21px; line-height: 1.2; white-space: normal; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
@@ -308,7 +313,8 @@ body[data-hud="verbose"] .instruction { font-style: italic; font-size: 21px; lin
 body[data-hud="verbose"] #nav::before { background: linear-gradient(180deg, rgba(5,8,13,0.94) 0%, rgba(5,8,13,0.86) 70%, rgba(5,8,13,0) 100%); }
 #nav .text-btn { font-family: var(--serif); font-size: 18px; }
 #nav .text-btn[aria-pressed="true"] { background: rgba(233,196,106,0.18); }
-.then { margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--secondary); }
+.then { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--secondary); white-space: nowrap; overflow: hidden; }
+.then > span:last-child { overflow: hidden; text-overflow: ellipsis; }
 .then .kicker { font-size: 10px; }
 .then { text-shadow: 0 1px 6px rgba(0,0,0,.8); }
 .then b { color: var(--bone); font-weight: 500; }
@@ -593,7 +599,7 @@ body.deep .deep-badge { display: block; }
           <li>Mappa Classica o Satellite, anche in guida</li>
           <li>Indicazioni vocali riscritte: tempi in base alla velocità, manovre ravvicinate dette insieme, regolabili in Voce</li>
           <li>In guida: comandi raccolti sotto la freccetta, mappa libera con le dita e "Riposiziona"</li>
-          <li>Indicazioni compatte (riassunto sotto il simbolo, la via in grande); "Aa" per la frase intera su fondo scuro</li>
+          <li>Indicazioni compatte: distanza, simbolo con sotto la via (e l'uscita dentro la rotonda); "Aa" per la frase intera su fondo scuro</li>
         </ul>
       </div>
       <div class="stage-item">
@@ -2733,7 +2739,11 @@ window.addEventListener('unhandledrejection', (e) => {
   function iconFor(step) {
     if (!step) return ICONS.straight;
     if (step.maneuver.type === 'arrive') return ICONS.arrive;
-    if (step.maneuver.type === 'roundabout' || step.maneuver.type === 'rotary') return ICONS.roundabout;
+    if (step.maneuver.type === 'roundabout' || step.maneuver.type === 'rotary') {
+      // Il numero dell'uscita dentro la rotonda.
+      const n = step.maneuver.exit;
+      return ICONS.roundabout + (n ? '<text x="12" y="10.2" text-anchor="middle" dominant-baseline="central" font-size="5.4" font-family="Inter, system-ui, sans-serif" font-weight="600" fill="currentColor" stroke="none">' + n + '</text>' : '');
+    }
     return ICONS[step.maneuver.modifier] || ICONS.straight;
   }
   function setOdometer(text) {
@@ -2762,11 +2772,12 @@ window.addEventListener('unhandledrejection', (e) => {
       $('#sunNow').hidden = !isGlare(s.bearing, sunPosition(new Date(), pos));
     }
     const isLast = !next;
-    const instr = hudVerbose ? (cur.s.maneuver.instruction || capital(phrase(cur, false, isLast)) + '.') : (streetOf(cur, isLast) || shortLabel(cur, isLast));
+    const instr = hudVerbose ? (cur.s.maneuver.instruction || capital(phrase(cur, false, isLast)) + '.') : '';
     if ($('#instruction').textContent !== instr) $('#instruction').textContent = instr;
     const icon = iconFor(cur.s);
     if (s.lastIcon !== icon) { s.lastIcon = icon; $('#maneuver').innerHTML = icon; }
-    const lab = shortLabel(cur, isLast);
+    // Sotto il simbolo: la via in cui si entra (la direzione la dice già il simbolo).
+    const lab = streetOf(cur, isLast) || shortLabel(cur, isLast);
     if ($('#mLabel').textContent !== lab) $('#mLabel').textContent = lab;
     const thenHtml = next ? '<span class="kicker">Dopo</span><span><b>' + esc(shortLabel(next, !steps[k + 2])) + '</b>' + (streetOf(next, !steps[k + 2]) ? ' · ' + esc(streetOf(next, !steps[k + 2])) : '') + '</span>' : '';
     if (s.lastThen !== thenHtml) { s.lastThen = thenHtml; $('#then').innerHTML = thenHtml; }
