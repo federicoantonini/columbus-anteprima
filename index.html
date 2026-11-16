@@ -372,7 +372,7 @@ body.deep .deep-badge { display: block; }
 
 /* Schermata d'apertura: copre la mappa finché la posizione buona non è pronta */
 /* Copertina: COLUMBUS grande e dorato su una rosa dei venti tenue, che si assesta come un ago che trova il nord. */
-#splash { position: absolute; inset: 0; z-index: 8; overflow: hidden; display: flex; align-items: center; justify-content: center; transition: opacity .8s ease;
+#splash { position: absolute; inset: 0; z-index: 8; overflow: hidden; display: flex; align-items: center; justify-content: center; transition: opacity 1s ease;
   background: radial-gradient(circle at 50% 46%, #141824 0%, #0A0D14 48%, #05070B 100%); }
 #splash.gone { opacity: 0; pointer-events: none; }
 #splash .rose { position: absolute; left: 50%; top: 50%; width: 112%; max-width: 520px; aspect-ratio: 1; transform: translate(-50%, -50%); opacity: 0.17;
@@ -382,8 +382,10 @@ body.deep .deep-badge { display: block; }
 .splash-title span { font-family: var(--serif); font-weight: 500; font-size: 44px; letter-spacing: .26em; margin-right: -.26em; line-height: 1;
   background: linear-gradient(180deg, #FFF1CC 0%, #F3D58C 45%, #C9A04E 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 0 22px rgba(233,196,106,0.35)); }
-.splash-title .rule { display: block; width: 64px; height: 1px; background: linear-gradient(90deg, rgba(233,196,106,0), rgba(233,196,106,0.85), rgba(233,196,106,0)); }
-.splash-title small { margin-top: 2px; font-family: var(--serif); font-style: italic; font-size: 16px; letter-spacing: .08em; color: var(--gold-soft); opacity: .85; animation: breathe 2.6s 1.4s ease-in-out infinite; }
+.splash-title { gap: 18px; }
+/* Filetti lunghi: oro pieno al centro, che svanisce verso le estremità; si allungano all'apertura. */
+.splash-title .rule { display: block; width: 300px; max-width: 82vw; height: 1px; background: linear-gradient(90deg, rgba(233,196,106,0) 0%, rgba(233,196,106,0.35) 22%, rgba(243,213,140,0.95) 50%, rgba(233,196,106,0.35) 78%, rgba(233,196,106,0) 100%); transform-origin: 50% 50%; animation: ruleIn 1.6s .3s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes ruleIn { from { transform: scaleX(0); opacity: 0; } to { transform: scaleX(1); opacity: 1; } }
 @keyframes titleIn { from { opacity: 0; transform: translateY(6px); letter-spacing: .4em; } to { opacity: 1; transform: none; } }
 @keyframes breathe { 50% { opacity: .45; } }
 
@@ -613,7 +615,7 @@ body.deep .deep-badge { display: block; }
           <li>In guida: comandi raccolti sotto la freccetta, mappa libera con le dita e "Riposiziona"</li>
           <li>Indicazioni compatte: distanza, simbolo con sotto la via (e l'uscita dentro la rotonda)</li>
           <li>Sestante: sfumatura morbida al posto dell'ombra tagliata</li>
-          <li>Copertina: COLUMBUS grande e dorato su una rosa dei venti che si assesta verso nord</li>
+          <li>Copertina: COLUMBUS grande e dorato tra due lunghi filetti, su una rosa dei venti che si assesta verso nord</li>
           <li>Freccia stabile in guida e mappa che ruota senza scatti; tolta la notte fonda (di notte resta la notte)</li>
         </ul>
       </div>
@@ -725,7 +727,6 @@ body.deep .deep-badge { display: block; }
       <i class="rule"></i>
       <span>COLUMBUS</span>
       <i class="rule"></i>
-      <small>La traversata</small>
     </div>
   </div>
   <div id="toast" role="status"></div>
@@ -1220,8 +1221,15 @@ window.addEventListener('unhandledrejection', (e) => {
   // così non si vede il salto da una posizione approssimata a quella vera.
   const PRECISE = 150; // metri
   let splashOpen = true, cameraPrecise = false, hadFix = false;
-  function hideSplash() { if (!splashOpen) return; splashOpen = false; $('#splash').classList.add('gone'); }
-  setTimeout(hideSplash, 4000);
+  // La copertina resta almeno 2,6 s dall'apertura (la rosa ha il tempo di assestarsi), al massimo 5 s.
+  const SPLASH_MIN = 2600, splashT0 = performance.now();
+  function hideSplash() {
+    if (!splashOpen) return;
+    const wait = SPLASH_MIN - (performance.now() - splashT0);
+    if (wait > 0) { setTimeout(hideSplash, wait); return; }
+    splashOpen = false; $('#splash').classList.add('gone');
+  }
+  setTimeout(hideSplash, 5000);
   function placeCamera(animated) {
     if (state.phase !== 'browse' || state.section !== 0) return;
     if (animated) browseCamera(1200);
