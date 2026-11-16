@@ -64,6 +64,9 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 .light button[aria-pressed="true"] { color: var(--gold-light); background: rgba(233,196,106,0.14); border-color: rgba(233,196,106,0.5); }
 .sunline { margin: 8px 30px 0; font-size: 12px; color: var(--secondary); }
 .sunline b { color: var(--gold-soft); font-weight: 500; }
+.shadows { margin: 10px 30px 0; display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--secondary); }
+.shadows input { flex: 1; accent-color: var(--gold); }
+.shadows output { width: 34px; text-align: right; color: var(--gold-soft); }
 .spacer { flex: 1; pointer-events: none !important; }
 .card { margin: 0 24px 12px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .card h2 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 30px; }
@@ -247,6 +250,7 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
         <button data-light="night">Notte</button>
       </div>
       <div class="sunline" id="sunLine"></div>
+      <label class="shadows">Ombre <input type="range" id="shadowRange" min="0" max="100" step="5"> <output id="shadowValue"></output></label>
     </div>
     <div class="spacer" id="homeSpacer"></div>
     <div class="card" id="sectionCard"></div>
@@ -333,6 +337,7 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
           <li>Ghiera con tre voci (Naviga, Rotte, Diario) allineate alle tacche principali</li>
           <li>Rimossi Esplora e Tragitti, e i testi sopra la ghiera</li>
           <li>La freccia segue la direzione di marcia (GPS) e, da fermo, la bussola</li>
+          <li>Ombre più scure, orientate secondo la posizione reale del sole; cursore "Ombre" per regolarle</li>
         </ul>
       </div>
       <div class="stage-item">
@@ -566,16 +571,40 @@ window.addEventListener('unhandledrejection', (e) => {
     applyLight();
   });
 
-  // Luce: "Sole reale" segue alba e tramonto della tua posizione, aggiornata ogni minuto.
+  // Luce del sole: direzione reale (azimut e altezza del sole) e ombre più marcate.
+  // L'ambiente (la luce che rischiara le ombre) si abbassa quando le ombre salgono.
+  const LIGHTS = {
+    dawn: { ambient: '#a9bad8', ambientI: 0.42, sun: '#ffd6b8', sunI: 0.64, fake: [110, 7] },
+    day: { ambient: '#d3dbe6', ambientI: 0.48, sun: '#fff3df', sunI: 0.74, fake: [180, 42] },
+    dusk: { ambient: '#b296b0', ambientI: 0.38, sun: '#ffb06c', sunI: 0.72, fake: [250, 7] }
+  };
+  state.shadows = load('columbus-shadows', 70);
+  function sunLights(preset) {
+    const L = LIGHTS[preset];
+    if (!L) return null; // notte: luci notturne di Mapbox (finestre accese, lampioni)
+    let az = L.fake[0], el = L.fake[1];
+    if (state.lightMode === 'auto') { const sun = sunPosition(new Date(), state.origin); az = sun.azimuth; el = sun.elevation; }
+    const polar = Math.min(84, Math.max(15, 90 - el)); // sole basso: ombre lunghe, ma sempre visibili
+    const k = state.shadows / 100;
+    return [
+      { id: 'columbus-ambient', type: 'ambient', properties: { color: L.ambient, intensity: +(L.ambientI * (1 - 0.6 * k)).toFixed(3) } },
+      { id: 'columbus-sun', type: 'directional', properties: { color: L.sun, intensity: L.sunI, direction: [+az.toFixed(1), +polar.toFixed(1)], 'cast-shadows': true, 'shadow-intensity': +(0.4 + 0.6 * k).toFixed(3) } }
+    ];
+  }
   function applyLight() {
     const p = state.lightMode === 'auto' ? presetFor(new Date(), state.origin) : state.lightMode;
     document.querySelectorAll('[data-light]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.light === state.lightMode)));
     try { map.setConfigProperty('basemap', 'lightPreset', p); } catch (e) {}
+    try { map.setLights(sunLights(p)); } catch (e) {}
+    $('#shadowRange').value = state.shadows;
+    $('#shadowValue').textContent = state.shadows + '%';
+    $('#shadowRange').disabled = p === 'night';
     const t = sunTimes(new Date(), state.origin);
     const names = { dawn: 'alba', day: 'giorno', dusk: 'tramonto', night: 'notte' };
     $('#sunLine').innerHTML = t ? 'Alba <b>' + fmtHM(t.sunrise) + '</b> · Tramonto <b>' + fmtHM(t.sunset) + '</b>' + (state.lightMode === 'auto' ? ' · ora: ' + names[p] : '') : '';
   }
   document.querySelectorAll('[data-light]').forEach((b) => b.onclick = () => { state.lightMode = b.dataset.light; store('columbus-light', state.lightMode); applyLight(); });
+  $('#shadowRange').addEventListener('input', () => { state.shadows = Number($('#shadowRange').value); store('columbus-shadows', state.shadows); applyLight(); });
   setInterval(applyLight, 60000);
 
   const puckEl = document.createElement('div');
