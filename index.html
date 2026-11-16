@@ -160,6 +160,25 @@ body[data-phase="nav"] #toast { top: auto; bottom: calc(var(--bottom) + 124px); 
 .sar-pick .go { flex: 1; min-width: 0; height: 50px; padding: 0 14px; white-space: nowrap; font-size: 16px; }
 .sar-pick .small-btn { flex: none; height: 50px; border-radius: 25px; }
 body[data-sar="open"] #nav .trip, body[data-sar="open"] #nav .sim { display: none; }
+/* Guida reale / simulazione */
+.start-row { display: flex; gap: 10px; }
+.start-row .go { flex: 1; min-width: 0; }
+.start-row .small-btn { flex: none; height: 56px; border-radius: 28px; padding: 0 18px; }
+/* Voce */
+#nav .voice-btn { position: absolute; right: 78px; bottom: calc(var(--bottom) + 64px); width: 48px; height: 48px; background: rgba(7,10,16,0.82); box-shadow: 0 6px 18px rgba(0,0,0,0.45); }
+#nav .voice-btn[aria-pressed="false"] { color: var(--muted); border-color: rgba(237,230,214,0.25); }
+body[data-sar="open"] #nav .voice-btn { display: none; }
+.key-row { display: flex; gap: 8px; margin: 8px 0 4px; }
+.key-row input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border-radius: 14px; background: var(--raised); border: 1px solid var(--stroke); color: var(--bone); font-size: 14px; outline: none; }
+.key-row .small-btn { height: 44px; }
+.voice-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1A2029; }
+.voice-row > div { flex: 1; min-width: 0; }
+.voice-row b { display: block; font-family: var(--serif); font-weight: 500; font-size: 20px; }
+.voice-row small { color: var(--secondary); font-size: 12px; }
+.voice-row .play { flex: none; width: 42px; height: 42px; }
+.voice-row .pick { flex: none; height: 38px; padding: 0 14px; border-radius: 19px; background: none; border: 1px solid rgba(233,196,106,0.45); color: var(--gold-light); font-size: 12px; letter-spacing: .1em; }
+.voice-row .pick[aria-pressed="true"] { background: var(--gold-light); color: #0A0D12; border-color: var(--gold-light); }
+.open-voice { margin-top: 10px; }
 .stop-pin { width: 22px; height: 22px; border-radius: 50%; background: #0C1320; border: 2px solid var(--gold-light); box-shadow: 0 0 0 4px rgba(243,213,140,0.2); }
 .result { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 0; background: none; border: 0; border-bottom: 1px solid #1A2029; text-align: left; }
 .result .ic { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--raised); display: flex; align-items: center; justify-content: center; color: var(--gold); }
@@ -398,7 +417,10 @@ body.deep .deep-badge { display: block; }
     <div class="bottom">
       <div class="glare" id="glareCard" hidden></div>
       <div class="options" id="options"></div>
-      <button class="go" id="start"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0A0D12" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3L14 21z"/></svg><span id="startLabel">Parti</span></button>
+      <div class="start-row">
+        <button class="go" id="start"><svg width="18" height="18" viewBox="0 0 24 24" fill="#0A0D12" aria-hidden="true"><path d="M21 3 3 10.5l7.5 3L14 21z"/></svg><span id="startLabel">Parti</span></button>
+        <button class="small-btn" id="simulate" aria-label="Simula il viaggio">Simula</button>
+      </div>
     </div>
   </section>
 
@@ -450,13 +472,14 @@ body.deep .deep-badge { display: block; }
       <div class="sar-cats" id="sarCats"></div>
       <div class="list" id="sarList"></div>
     </div>
-    <div class="sim">SIMULAZIONE ×4</div>
+    <div class="sim" id="simLabel">SIMULAZIONE ×4</div>
     <div class="trip">
       <span class="eta" id="eta"></span><small>arrivo</small>
       <span class="dot"></span><span id="remMin"></span>
       <span class="dot"></span><span id="remKm"></span>
       <button class="end" id="end">Fine</button>
     </div>
+    <button class="round gold voice-btn" id="voiceBtn" aria-label="Voce attiva" aria-pressed="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6L8 10z"/><path class="wave" d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M17 9l5 6M22 9l-5 6" style="display:none"/></svg></button>
     <button class="round gold sar-btn" id="sarBtn" aria-label="Cerca sul percorso"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></button>
   </section>
 
@@ -473,17 +496,46 @@ body.deep .deep-badge { display: block; }
   </section>
 
   <!-- Tappe di sviluppo -->
+  <div class="overlay" id="voiceOverlay" hidden>
+    <header><h2>Voce</h2><button class="close" data-close>Chiudi</button></header>
+    <div class="scroll">
+      <p class="muted">Columbus legge le indicazioni con una voce di Google (Chirp 3 HD). Senza chiave usa la voce del telefono.</p>
+      <div class="kicker" style="margin-top:18px">Chiave Google Text-to-Speech</div>
+      <div class="key-row"><input id="ttsKey" placeholder="Incolla qui la chiave (AIza…)" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="small-btn" id="ttsSave">Salva</button></div>
+      <div class="hint" id="voiceHint"></div>
+      <div id="voiceList"></div>
+    </div>
+  </div>
   <div class="overlay" id="news" hidden>
     <header><h2>Tappe di sviluppo</h2><button class="close" data-close>Chiudi</button></header>
     <div class="scroll">
       <div class="stage-item">
-        <div class="kicker">Prossimi passi</div>
-        <b>Ricerca dei luoghi, seconda parte</b>
+        <div class="kicker">Tappa 10 · questa versione</div>
+        <b>Guida con GPS reale e voce</b>
         <ul>
-          <li>Categorie con un tocco (Benzina, Ricarica, Parcheggi, Ristoranti, Caffè, Farmacie)</li>
-          <li>Ricerche recenti e scorciatoie a campo vuoto</li>
-          <li>Toccare un luogo direttamente sulla mappa per aprirne la scheda</li>
-          <li>Ricerca lungo il percorso durante la guida</li>
+          <li>"Parti" segue il GPS; "Simula" fa scorrere il viaggio da solo</li>
+          <li>Ricalcolo automatico se esci dal percorso</li>
+          <li>Indicazioni a voce (Google Chirp 3 HD, o la voce del telefono)</li>
+          <li>Schermo sempre acceso durante la guida</li>
+        </ul>
+        <button class="small-btn open-voice" id="openVoice">Scegli la voce</button>
+      </div>
+      <div class="stage-item">
+        <div class="kicker">Tappe 7–9</div>
+        <b>Ricerca completa e luce sulla destinazione</b>
+        <ul>
+          <li>Categorie con un tocco, recenti e scorciatoie, tocco sulla mappa</li>
+          <li>Ricerca lungo il percorso con "Aggiungi tappa"</li>
+          <li>Onda di luce sul filo d'oro, luce che sale dalla destinazione</li>
+        </ul>
+      </div>
+      <div class="stage-item">
+        <div class="kicker">Prossimi passi</div>
+        <b>L'app iPhone</b>
+        <ul>
+          <li>Portare nell'app tutto quanto affinato qui</li>
+          <li>Segnali: vibrazioni diverse per ogni manovra</li>
+          <li>CarPlay</li>
         </ul>
       </div>
       <div class="stage-item">
@@ -983,6 +1035,7 @@ window.addEventListener('unhandledrejection', (e) => {
       state.origin = [c.longitude, c.latitude];
       if (typeof c.heading === 'number' && !isNaN(c.heading) && (c.speed || 0) > 1) heading.course = c.heading;
       if (!state.sim) puck.setLngLat(state.origin);
+      else if (state.sim.real) onNavFix(c);
       if (!hadFix) { hadFix = true; applyLight(); }
       if (precise) {
         store('columbus-last-pos', [+c.longitude.toFixed(5), +c.latitude.toFixed(5)]);
@@ -1809,8 +1862,12 @@ window.addEventListener('unhandledrejection', (e) => {
   document.addEventListener('click', (e) => { if (!e.target.closest('#placeMenu') && !e.target.closest('#placeSave')) $('#placeMenu').hidden = true; });
 
   // ---------- Percorsi ----------
+  // Indirizzo delle Directions: con le istruzioni vocali in italiano (testo e momento in cui dirle).
+  function directionsUrl(coords, extra = '') {
+    return 'https://api.mapbox.com/directions/v5/mapbox/driving-traffic/' + coords.map((c) => c.join(',')).join(';') + '?geometries=geojson&overview=full&steps=true&language=it&annotations=congestion&voice_instructions=true&voice_units=metric' + extra + '&access_token=' + token;
+  }
   async function fetchRoutes(from, to) {
-    const res = await fetch('https://api.mapbox.com/directions/v5/mapbox/driving-traffic/' + from.join(',') + ';' + to.join(',') + '?alternatives=true&geometries=geojson&overview=full&steps=true&language=it&annotations=congestion&access_token=' + token);
+    const res = await fetch(directionsUrl([from, to], '&alternatives=true'));
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (!data.routes || !data.routes.length) throw new Error(data.message || 'nessun percorso');
@@ -1949,29 +2006,282 @@ window.addEventListener('unhandledrejection', (e) => {
       idx = best;
       return { s, at: cum[best] };
     });
-    return { c, cum, total: cum[cum.length - 1] || 1, steps };
+    const total = cum[cum.length - 1] || 1;
+    // Frasi da dire e dove: Mapbox dà, per ogni tratto, a quanti metri dalla fine annunciare la manovra.
+    const cues = [];
+    steps.forEach((st, i) => {
+      const end = i + 1 < steps.length ? steps[i + 1].at : total;
+      (st.s.voiceInstructions || []).forEach((v) => { if (v.announcement) cues.push({ at: Math.max(0, end - (v.distanceAlongGeometry || 0)), text: v.announcement, done: false }); });
+    });
+    cues.sort((a, b) => a.at - b.at);
+    return { c, cum, total, steps, cues };
   }
-  $('#start').onclick = () => {
+  // "Parti": guida con il GPS. "Simula": il viaggio scorre da solo (×4), per provare a casa.
+  function startNav(real) {
     const r = state.routes[state.sel];
     const p = prepare(r);
     state.saved = false;
-    state.sim = { r, p, t: 0, seg: 0, last: performance.now(), startedAt: Date.now(), bearing: bearingOf(p.c[0], p.c[Math.min(1, p.c.length - 1)]), lastDist: '' };
+    state.sim = { r, p, t: 0, seg: 0, last: performance.now(), startedAt: Date.now(), bearing: bearingOf(p.c[0], p.c[Math.min(1, p.c.length - 1)]), lastDist: '',
+      real, pos: real ? state.origin.slice() : p.c[0], target: null, course: null, track: real ? [state.origin.slice()] : [], offSince: 0, lastReroute: 0 };
+    voice.unlock();
+    voice.prepare(p);
+    if (real) keepAwake(true);
+    $('#simLabel').textContent = real ? 'GPS' : 'SIMULAZIONE ×4';
     showDestLight(state.dest.coord);
     show('nav');
     state.sim.raf = requestAnimationFrame(tick);
+  }
+  $('#start').onclick = () => startNav(true);
+  $('#simulate').onclick = () => startNav(false);
+
+  // ---------- Guida con il GPS ----------
+  // Proietta un punto sul percorso: metri dall'inizio, distanza dalla strada, tratto e punto più vicino.
+  function snapToRoute(p, coord, from = 0, to = Infinity) {
+    let best = { at: 0, off: Infinity, seg: 0, point: coord };
+    const c = p.c, cum = p.cum;
+    for (let i = Math.max(0, from); i < Math.min(c.length - 1, to); i++) {
+      const a = c[i], b = c[i + 1];
+      const kx = 111320 * Math.cos(a[1] * toR), ky = 110540;
+      const bx = (b[0] - a[0]) * kx, by = (b[1] - a[1]) * ky, px = (coord[0] - a[0]) * kx, py = (coord[1] - a[1]) * ky;
+      const L2 = bx * bx + by * by;
+      const f = L2 ? Math.max(0, Math.min(1, (px * bx + py * by) / L2)) : 0;
+      const off = Math.hypot(px - bx * f, py - by * f);
+      if (off < best.off) best = { at: cum[i] + (cum[i + 1] - cum[i]) * f, off, seg: i, point: [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f] };
+    }
+    return best;
+  }
+  const OFF_ROUTE = 50, OFF_ROUTE_MS = 6000;
+  function onNavFix(c) {
+    const s = state.sim;
+    if (!s || !s.real) return;
+    const coord = [c.longitude, c.latitude], now = performance.now();
+    if (typeof c.heading === 'number' && !isNaN(c.heading) && (c.speed || 0) > 1.5) s.course = c.heading;
+    // Prima cerco vicino a dove eravamo (così un incrocio o un cavalcavia non fanno saltare avanti), poi ovunque.
+    let w = snapToRoute(s.p, coord, s.seg - 3, s.seg + 400);
+    if (w.off > OFF_ROUTE) { const all = snapToRoute(s.p, coord); if (all.off < w.off) w = all; }
+    const good = (c.accuracy || 99) <= 40;
+    if (w.off <= OFF_ROUTE) {
+      s.offSince = 0;
+      if (w.at >= s.t - 30) { s.t = Math.max(s.t, w.at); s.seg = Math.max(s.seg, w.seg); }
+      s.target = w.off <= 30 ? w.point : coord;
+    } else {
+      s.target = coord;
+      if (good && !s.offSince) s.offSince = now;
+      if (s.offSince && now - s.offSince > OFF_ROUTE_MS && !s.rerouting && now - s.lastReroute > 15000) reroute(coord);
+    }
+    const last = s.track[s.track.length - 1];
+    if (!last || dist(last, coord) >= 15) s.track.push(coord);
+  }
+  // Fuori percorso: nuova rotta da dove sei (passando dalla tappa, se non l'hai ancora raggiunta).
+  async function reroute(from) {
+    const s = state.sim; if (!s) return;
+    s.rerouting = true; s.lastReroute = performance.now();
+    voice.say('Ricalcolo il percorso.');
+    toast('Ricalcolo il percorso…');
+    try {
+      const wps = [from].concat(state.stop ? [state.stop.place.coord] : [], [state.dest.coord]);
+      const bearings = s.course !== null ? '&bearings=' + Math.round(s.course) + ',45' + ';'.repeat(wps.length - 1) : '';
+      const res = await fetch(directionsUrl(wps, bearings));
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const r = data.routes && data.routes[0];
+      if (!r) throw new Error(data.message || 'nessun percorso');
+      if (state.sim !== s) return;
+      const p = prepare(r);
+      Object.assign(s, { r, p, t: 0, seg: 0, lastDist: '', offSince: 0 });
+      if (state.stop) state.stop.at = (r.legs[0] && r.legs[0].distance) || 0;
+      state.routes = [r]; state.sel = 0;
+      drawRoutes();
+      voice.prepare(p);
+    } catch (e) { toast('Ricalcolo non riuscito (' + e.message + ').'); }
+    finally { s.rerouting = false; }
+  }
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try {
+      if (on && 'wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); }
+      else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+    } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.sim && state.sim.real) keepAwake(true); });
+
+  // ---------- Voce ----------
+  // Google Cloud Text-to-Speech (voci Chirp 3 HD) con la chiave salvata su questo telefono;
+  // senza chiave, la voce del telefono. Le frasi del percorso si preparano tutte alla partenza
+  // e restano in memoria sul telefono: le stesse frasi non si pagano due volte.
+  const voice = {
+    muted: load('columbus-voice-muted', false),
+    name: loadRaw('columbus-voice-name') || '',
+    key: loadRaw('columbus-google-key') || '',
+    el: new Audio(), urls: new Map(), pending: new Map(), unlocked: false, token: 0,
+    unlock() {
+      if (this.unlocked) return;
+      this.unlocked = true;
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+      // iOS lascia suonare più tardi solo un elemento audio "sbloccato" da un tocco: lo sblocchiamo ora, in silenzio.
+      try { this.el.src = silentWav(); this.el.play().catch(() => {}); } catch (e) {}
+      try { if (window.speechSynthesis) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } } catch (e) {}
+    },
+    async synth(text, name = this.name) {
+      if (!this.key || !name) return null;
+      const id = name + '|' + text;
+      if (this.urls.has(id)) return this.urls.get(id);
+      if (this.pending.has(id)) return this.pending.get(id);
+      const job = (async () => {
+        const cacheKey = 'https://voce.columbus.local/' + encodeURIComponent(name) + '/' + encodeURIComponent(text);
+        let blob = null, cache = null;
+        try { cache = await caches.open('columbus-voce-1'); const hit = await cache.match(cacheKey); if (hit) blob = await hit.blob(); } catch (e) {}
+        if (!blob) {
+          const res = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize?key=' + encodeURIComponent(this.key), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input: { text }, voice: { languageCode: 'it-IT', name }, audioConfig: { audioEncoding: 'MP3' } })
+          });
+          if (!res.ok) { let msg = 'HTTP ' + res.status; try { msg = (await res.json()).error.message || msg; } catch (e) {} throw new Error(msg); }
+          const b64 = (await res.json()).audioContent;
+          const bin = atob(b64), bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          blob = new Blob([bytes], { type: 'audio/mpeg' });
+          try { if (cache) await cache.put(cacheKey, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg' } })); } catch (e) {}
+        }
+        const url = URL.createObjectURL(blob);
+        this.urls.set(id, url);
+        return url;
+      })();
+      this.pending.set(id, job);
+      try { return await job; } finally { this.pending.delete(id); }
+    },
+    // Prepara tutte le frasi del percorso (3 alla volta), più quella del ricalcolo.
+    prepare(p) {
+      const texts = [...new Set(p.cues.map((c) => c.text).concat(['Ricalcolo il percorso.']))];
+      if (!this.key || !this.name) return;
+      let i = 0;
+      const worker = async () => { while (i < texts.length) { const t = texts[i++]; try { await this.synth(t); } catch (e) { this.lastError = e.message; return; } } };
+      worker(); worker(); worker();
+    },
+    async say(text) {
+      if (this.muted || !text) return;
+      const my = ++this.token; // una frase nuova interrompe quella vecchia
+      let url = null;
+      try { url = await Promise.race([this.synth(text), new Promise((r) => setTimeout(() => r(null), 2500))]); } catch (e) { this.lastError = e.message; }
+      if (my !== this.token) return;
+      if (url) {
+        try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+        this.el.src = url; this.el.currentTime = 0;
+        this.el.play().catch(() => this.fallback(text));
+      } else this.fallback(text);
+    },
+    fallback(text) {
+      if (!window.speechSynthesis) return;
+      try {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'it-IT';
+        const it = speechSynthesis.getVoices().filter((v) => /^it/i.test(v.lang));
+        u.voice = it.find((v) => /premium|enhanced|siri/i.test(v.name)) || it[0] || null;
+        speechSynthesis.speak(u);
+      } catch (e) {}
+    },
+    stop() { this.token++; try { this.el.pause(); } catch (e) {} try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} }
   };
+  // Mezzo decimo di secondo di silenzio (WAV), per sbloccare l'audio su iPhone.
+  function silentWav() {
+    const n = 2205, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  }
+  // In guida: quando si supera il punto di una frase, la si dice (solo la più recente, se ce n'è più d'una).
+  function voiceTick(s) {
+    let due = null;
+    for (const c of s.p.cues) { if (c.done) continue; if (s.t >= c.at) { c.done = true; due = c; } else break; }
+    if (due && s.t - due.at < 250) voice.say(due.text);
+  }
+  function paintVoiceBtn() {
+    const b = $('#voiceBtn');
+    b.setAttribute('aria-pressed', String(!voice.muted));
+    b.setAttribute('aria-label', voice.muted ? 'Voce spenta' : 'Voce attiva');
+    b.querySelector('.wave').style.display = voice.muted ? 'none' : '';
+    b.querySelector('.mute').style.display = voice.muted ? '' : 'none';
+  }
+  $('#voiceBtn').onclick = () => { voice.muted = !voice.muted; store('columbus-voice-muted', voice.muted); if (voice.muted) voice.stop(); paintVoiceBtn(); };
+  paintVoiceBtn();
+
+  // Scelta della voce: elenco delle voci italiane Chirp 3 HD, con ascolto di prova.
+  const PLAY_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  const VOICE_SAMPLE = 'Tra 300 metri, alla rotonda prendi la seconda uscita e continua su Via Nomentana.';
+  async function renderVoices() {
+    $('#ttsKey').value = voice.key;
+    const list = $('#voiceList');
+    list.innerHTML = '';
+    const phoneRow = '<div class="voice-row"><div><b>Voce del telefono</b><small>Senza chiave Google · gratuita</small></div><button class="round gold play" data-play="" aria-label="Ascolta">' + PLAY_ICON + '</button><button class="pick" data-pick="" aria-pressed="' + (!voice.name || !voice.key) + '">' + (!voice.name || !voice.key ? 'IN USO' : 'SCEGLI') + '</button></div>';
+    if (!voice.key) { $('#voiceHint').textContent = 'Incolla la chiave e tocca Salva per ascoltare le voci di Google.'; list.innerHTML = phoneRow; bindVoiceRows(); return; }
+    $('#voiceHint').textContent = 'Carico le voci…';
+    try {
+      const res = await fetch('https://texttospeech.googleapis.com/v1/voices?languageCode=it-IT&key=' + encodeURIComponent(voice.key));
+      if (!res.ok) { let msg = 'HTTP ' + res.status; try { msg = (await res.json()).error.message || msg; } catch (e) {} throw new Error(msg); }
+      const voices = ((await res.json()).voices || []).filter((v) => /Chirp3-HD/i.test(v.name)).sort((a, b) => a.name.localeCompare(b.name));
+      if (!voices.length) throw new Error('nessuna voce Chirp 3 HD in italiano');
+      if (!voice.name) { voice.name = voices[0].name; try { localStorage.setItem('columbus-voice-name', voice.name); } catch (e) {} }
+      $('#voiceHint').textContent = 'Tocca il triangolo per ascoltare, poi scegli la voce di Columbus.';
+      list.innerHTML = voices.map((v) => {
+        const short = v.name.split('-').pop();
+        const g = v.ssmlGender === 'FEMALE' ? 'Femminile' : v.ssmlGender === 'MALE' ? 'Maschile' : '';
+        const on = v.name === voice.name;
+        return '<div class="voice-row"><div><b>' + esc(short) + '</b><small>' + esc(g) + ' · Chirp 3 HD</small></div><button class="round gold play" data-play="' + esc(v.name) + '" aria-label="Ascolta">' + PLAY_ICON + '</button><button class="pick" data-pick="' + esc(v.name) + '" aria-pressed="' + on + '">' + (on ? 'IN USO' : 'SCEGLI') + '</button></div>';
+      }).join('') + phoneRow.replace('aria-pressed="false"', 'aria-pressed="false"');
+    } catch (e) {
+      $('#voiceHint').textContent = 'Google non risponde: ' + e.message;
+      list.innerHTML = phoneRow;
+    }
+    bindVoiceRows();
+  }
+  function bindVoiceRows() {
+    $('#voiceList').querySelectorAll('[data-play]').forEach((b) => b.onclick = async () => {
+      voice.unlock();
+      const name = b.dataset.play;
+      if (!name) { voice.fallback(VOICE_SAMPLE); return; }
+      b.textContent = '…';
+      try { const url = await voice.synth(VOICE_SAMPLE, name); voice.el.src = url; voice.el.currentTime = 0; await voice.el.play(); }
+      catch (e) { $('#voiceHint').textContent = 'Ascolto non riuscito: ' + e.message; }
+      b.innerHTML = PLAY_ICON;
+    });
+    $('#voiceList').querySelectorAll('[data-pick]').forEach((b) => b.onclick = () => {
+      voice.name = b.dataset.pick;
+      try { if (voice.name) localStorage.setItem('columbus-voice-name', voice.name); else localStorage.removeItem('columbus-voice-name'); } catch (e) {}
+      if (!voice.name) { voice.keyOff = true; }
+      renderVoices();
+    });
+  }
+  $('#ttsSave').onclick = () => {
+    voice.key = $('#ttsKey').value.trim();
+    try { if (voice.key) localStorage.setItem('columbus-google-key', voice.key); else localStorage.removeItem('columbus-google-key'); } catch (e) {}
+    voice.urls.clear();
+    renderVoices();
+  };
+  $('#openVoice').onclick = () => { $('#news').hidden = true; $('#voiceOverlay').hidden = false; renderVoices(); };
   function tick(now) {
     const s = state.sim;
     if (!s) return;
     const dt = Math.min(0.1, (now - s.last) / 1000);
     s.last = now;
-    s.t = Math.min(s.p.total, s.t + 14 * SIM_SPEED * dt);
-    while (s.seg < s.p.cum.length - 2 && s.p.cum[s.seg + 1] < s.t) s.seg++;
-    const a = s.p.c[s.seg], b = s.p.c[Math.min(s.seg + 1, s.p.c.length - 1)];
-    const len = (s.p.cum[s.seg + 1] - s.p.cum[s.seg]) || 1;
-    const f = Math.min(1, (s.t - s.p.cum[s.seg]) / len);
-    const pos = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
-    if (len > 2) { const diff = ((bearingOf(a, b) - s.bearing + 540) % 360) - 180; s.bearing = (s.bearing + diff * Math.min(1, dt * 2.5) + 360) % 360; }
+    let pos;
+    if (s.real) {
+      // GPS: la freccia scivola verso l'ultima posizione (agganciata alla strada se ci sei sopra).
+      const target = s.target || s.pos, k = Math.min(1, dt * 2.5);
+      pos = [s.pos[0] + (target[0] - s.pos[0]) * k, s.pos[1] + (target[1] - s.pos[1]) * k];
+      const a = s.p.c[s.seg], b = s.p.c[Math.min(s.seg + 1, s.p.c.length - 1)];
+      const want = s.course !== null ? s.course : bearingOf(a, b);
+      const diff = ((want - s.bearing + 540) % 360) - 180; s.bearing = (s.bearing + diff * Math.min(1, dt * 2.5) + 360) % 360;
+    } else {
+      s.t = Math.min(s.p.total, s.t + 14 * SIM_SPEED * dt);
+      while (s.seg < s.p.cum.length - 2 && s.p.cum[s.seg + 1] < s.t) s.seg++;
+      const a = s.p.c[s.seg], b = s.p.c[Math.min(s.seg + 1, s.p.c.length - 1)];
+      const len = (s.p.cum[s.seg + 1] - s.p.cum[s.seg]) || 1;
+      const f = Math.min(1, (s.t - s.p.cum[s.seg]) / len);
+      pos = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+      if (len > 2) { const diff = ((bearingOf(a, b) - s.bearing + 540) % 360) - 180; s.bearing = (s.bearing + diff * Math.min(1, dt * 2.5) + 360) % 360; }
+    }
     puck.setLngLat(pos).setRotation(s.bearing);
     if (!s.lastLook || now - s.lastLook > 1000) { s.lastLook = now; upgradeDestLight(); }
     s.pos = pos;
@@ -1979,7 +2289,9 @@ window.addEventListener('unhandledrejection', (e) => {
     if (state.stop && s.t > state.stop.at + 30) { state.stop.marker.remove(); state.stop = null; } // tappa superata
     setTrim(s.t / s.p.total);
     hud(s, pos);
-    if (s.t >= s.p.total) { arrive(); return; }
+    voiceTick(s);
+    const arrived = s.real ? (s.p.total - s.t < 25 || dist(pos, state.dest.coord) < 25) : s.t >= s.p.total;
+    if (arrived) { arrive(); return; }
     s.raf = requestAnimationFrame(tick);
   }
   const ICONS = {
@@ -2185,7 +2497,7 @@ window.addEventListener('unhandledrejection', (e) => {
     const btn = $('#sarAdd'); if (btn) { btn.disabled = true; btn.lastChild.textContent = 'Ricalcolo…'; }
     try {
       const from = s.pos || s.p.c[s.seg];
-      const res = await fetch('https://api.mapbox.com/directions/v5/mapbox/driving-traffic/' + [from, pl.coord, state.dest.coord].map((c) => c.join(',')).join(';') + '?geometries=geojson&overview=full&steps=true&language=it&annotations=congestion&access_token=' + token);
+      const res = await fetch(directionsUrl([from, pl.coord, state.dest.coord]));
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
       const r = data.routes && data.routes[0];
@@ -2200,6 +2512,7 @@ window.addEventListener('unhandledrejection', (e) => {
       state.routes = [r]; state.sel = 0;
       Object.assign(s, { r, p, t: 0, seg: 0, lastDist: '' });
       drawRoutes();
+      voice.prepare(p);
       toast('Tappa aggiunta: ' + pl.name + (added ? ' · +' + added + ' min' : '') + '.');
     } catch (e) {
       if (btn) { btn.disabled = false; btn.lastChild.textContent = 'Aggiungi tappa'; }
@@ -2217,7 +2530,15 @@ window.addEventListener('unhandledrejection', (e) => {
     $('#saveLog').disabled = false;
     $('#arrKicker').textContent = 'Arrivo · ' + fmtHM(new Date());
     $('#arrName').textContent = state.dest.name;
-    $('#arrLine').textContent = fmtKm(s.r.distance) + ' in ' + Math.max(1, Math.round(s.r.duration / 60)) + ' minuti.';
+    if (s.real) {
+      s.track.push(state.dest.coord);
+      s.realDistance = s.track.reduce((m, c, i) => i ? m + dist(s.track[i - 1], c) : 0, 0);
+      s.realDuration = (Date.now() - s.startedAt) / 1000;
+    }
+    const km = s.real ? s.realDistance : s.r.distance, secs = s.real ? s.realDuration : s.r.duration;
+    const mins = Math.max(1, Math.round(secs / 60));
+    $('#arrLine').textContent = fmtKm(km) + ' in ' + mins + (mins === 1 ? ' minuto.' : ' minuti.');
+    keepAwake(false);
     if (!destLight.shape) beacon.setLngLat(state.dest.coord).addTo(map); // la luce della destinazione fa già da faro
     setTimeout(upgradeDestLight, 1700);
     stopWave();
@@ -2232,7 +2553,8 @@ window.addEventListener('unhandledrejection', (e) => {
     if (state.saved || !state.sim) return;
     const r = state.sim.r;
     const list = tripsData();
-    list.unshift({ t: state.sim.startedAt, name: state.dest.name, address: state.dest.address, distance: r.distance, duration: r.duration, path: simplify(r.geometry.coordinates) });
+    const s = state.sim, real = s.real && s.track.length > 5; // in guida reale: la strada fatta davvero
+    list.unshift({ t: s.startedAt, name: state.dest.name, address: state.dest.address, distance: real ? s.realDistance : r.distance, duration: real ? s.realDuration : r.duration, path: simplify(real ? s.track : r.geometry.coordinates) });
     store('columbus-trips', list);
     state.saved = true;
     $('#saveLabel').textContent = 'Salvato';
@@ -2242,6 +2564,7 @@ window.addEventListener('unhandledrejection', (e) => {
 
   function reset() {
     if (state.sim) cancelAnimationFrame(state.sim.raf);
+    voice.stop(); keepAwake(false);
     if (state.orbit) cancelAnimationFrame(state.orbit);
     stopWave();
     clearCategoryPins(); state.category = null;
