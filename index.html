@@ -59,8 +59,8 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 .where { margin: 22px 28px 0; display: flex; align-items: flex-end; gap: 12px; padding: 0 0 10px; background: none; border: 0; border-bottom: 1px solid rgba(233,196,106,0.45); text-align: left; width: calc(100% - 56px); }
 .where span { flex: 1; font-family: var(--serif); font-style: italic; font-size: 32px; color: rgba(237,230,214,0.9); }
 .where svg { color: var(--gold-light); }
-.light { margin: 14px 28px 0; align-self: flex-start; display: flex; gap: 3px; padding: 4px; border-radius: 14px; background: rgba(14,19,27,0.82); border: 1px solid var(--stroke); }
-.light button { height: 30px; padding: 0 9px; border-radius: 10px; border: 1px solid transparent; background: none; font-size: 12px; color: var(--secondary); }
+.light { margin: 14px 28px 0; align-self: flex-start; max-width: calc(100% - 56px); display: flex; flex-wrap: wrap; gap: 3px; padding: 4px; border-radius: 14px; background: rgba(14,19,27,0.82); border: 1px solid var(--stroke); }
+.light button { flex: none; height: 30px; padding: 0 9px; border-radius: 10px; border: 1px solid transparent; background: none; font-size: 12px; color: var(--secondary); white-space: nowrap; }
 .light button[aria-pressed="true"] { color: var(--gold-light); background: rgba(233,196,106,0.14); border-color: rgba(233,196,106,0.5); }
 .sunline { margin: 8px 30px 0; font-size: 12px; color: var(--secondary); }
 .sunline b { color: var(--gold-soft); font-weight: 500; }
@@ -214,6 +214,35 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 .stage-item ul { margin: 6px 0 0; padding-left: 18px; color: var(--secondary); font-size: 14px; line-height: 1.6; }
 .stage-item a { color: var(--gold); font-size: 13px; }
 
+/* Notte profonda: quasi tutto nero, oro attenuato, niente bianchi brillanti */
+body.deep #phone { background: #000; }
+body.deep .shade.top { background: linear-gradient(180deg, rgba(0,0,0,0.96), rgba(0,0,0,0)); }
+body.deep .shade.bottom { background: linear-gradient(0deg, rgba(0,0,0,0.97), rgba(0,0,0,0)); }
+body.deep .wordmark, body.deep .kicker { color: #8A7D60; }
+body.deep .where span { color: #9C8F72; }
+body.deep .where { border-bottom-color: rgba(156,126,62,0.35); }
+body.deep .where svg, body.deep .news-btn { color: #9C7E3E; border-color: rgba(156,126,62,0.4); }
+body.deep .light { background: rgba(0,0,0,0.85); border-color: #1d1b17; }
+body.deep .light button { color: #8A7D60; }
+body.deep .light button[aria-pressed="true"] { color: #C9A85E; background: rgba(156,126,62,0.14); border-color: rgba(156,126,62,0.45); }
+body.deep .sunline, body.deep .sunline b { color: #8A7D60; }
+body.deep .sextant { filter: brightness(0.62) saturate(0.8); }
+body.deep .puck { filter: brightness(0.7) saturate(0.85); }
+body.deep .odo, body.deep .dist { color: #B89B5E; }
+body.deep .unit { color: #8A7D60; }
+body.deep .instruction { color: #9C8F72; }
+body.deep .then, body.deep .trip, body.deep .trip small { color: #8A7D60; }
+body.deep .trip .eta { color: #B89B5E; }
+body.deep .trip .dot { background: #6a5a38; }
+body.deep .maneuver { color: #B89B5E; }
+body.deep .end { background: #000; border-color: rgba(229,72,77,0.35); color: #9C8F72; }
+body.deep .sim { color: #5f5745; }
+body.deep .go { background: linear-gradient(180deg, #B89B5E, #9C7E3E); box-shadow: none; }
+body.deep .option, body.deep .glare, body.deep .chip { background: rgba(0,0,0,0.9); }
+body.deep .mapboxgl-ctrl-logo, body.deep .mapboxgl-ctrl-attrib { opacity: 0.45; }
+.deep-badge { display: none; align-self: flex-start; margin-bottom: 10px; font-size: 10px; letter-spacing: .32em; color: #8A7D60; }
+body.deep .deep-badge { display: block; }
+
 #toast { position: absolute; left: 20px; right: 20px; top: calc(var(--top) + 120px); padding: 14px 16px; border-radius: 16px; background: rgba(14,19,27,0.96); border: 1px solid rgba(233,196,106,0.5); font-size: 14px; line-height: 1.4; opacity: 0; transform: translateY(-6px); transition: all .3s ease; pointer-events: none; z-index: 6; }
 #toast.show { opacity: 1; transform: none; }
 #gate, #fatal { position: absolute; inset: 0; z-index: 7; background: var(--base); display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 32px; }
@@ -245,6 +274,7 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
         <button data-light="day">Giorno</button>
         <button data-light="dusk">Tramonto</button>
         <button data-light="night">Notte</button>
+        <button data-light="deep">Notte profonda</button>
       </div>
       <div class="sunline" id="sunLine"></div>
     </div>
@@ -290,6 +320,7 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
 
   <!-- Guida -->
   <section id="nav" class="screen" hidden>
+    <div class="deep-badge">☾ NOTTE PROFONDA</div>
     <div class="hud-top">
       <div>
         <div class="kicker">Tra</div>
@@ -327,7 +358,15 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
     <header><h2>Tappe di sviluppo</h2><button class="close" data-close>Chiudi</button></header>
     <div class="scroll">
       <div class="stage-item">
-        <div class="kicker">Tappa 4 · questa versione</div>
+        <div class="kicker">Tappa 5 · questa versione</div>
+        <b>Notte profonda (primo tentativo)</b>
+        <ul>
+          <li>Pulsante "Notte profonda": mappa quasi nera, senza edifici né etichette</li>
+          <li>Il filo d'oro resta l'unica luce; testi in oro attenuato, niente bianchi brillanti</li>
+        </ul>
+      </div>
+      <div class="stage-item">
+        <div class="kicker">Tappa 4</div>
         <b>Sestante essenziale</b>
         <ul>
           <li>Ghiera con tre voci (Naviga, Rotte, Diario) allineate alle tacche principali</li>
@@ -335,6 +374,7 @@ body[data-phase="browse"][data-panel="solid"] #veil { opacity: 1; background: #0
           <li>La freccia segue la direzione di marcia (GPS) e, da fermo, la bussola</li>
           <li>Ombre più scure (75%), orientate secondo la posizione reale del sole; la notte resta notte</li>
         </ul>
+        <a href="tappa-4/">Apri la versione della tappa 4 →</a>
       </div>
       <div class="stage-item">
         <div class="kicker">Tappa 3</div>
@@ -597,16 +637,39 @@ window.addEventListener('unhandledrejection', (e) => {
       { id: 'columbus-sun', type: 'directional', properties: { color: L.sun, intensity: L.sunI, direction: [+az.toFixed(1), +polar.toFixed(1)], 'cast-shadows': true, 'shadow-intensity': +(0.4 + 0.6 * k).toFixed(3) } }
     ];
   }
+  // Notte profonda: notte di Mapbox, senza edifici 3D né etichette, luce quasi a zero.
+  const DEEP_LIGHTS = [
+    { id: 'columbus-ambient', type: 'ambient', properties: { color: '#2a2f3a', intensity: 0.07 } },
+    { id: 'columbus-sun', type: 'directional', properties: { color: '#000000', intensity: 0, direction: [0, 45], 'cast-shadows': false, 'shadow-intensity': 0 } }
+  ];
+  function setBasemap(key, value) { try { map.setConfigProperty('basemap', key, value); } catch (e) {} }
+  function applyRouteStyle() {
+    const deep = state.lightMode === 'deep';
+    const set = (id, prop, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); } catch (e) {} };
+    set('route-glow', 'line-opacity', deep ? 0.12 : 0.5);
+    set('route-core', 'line-color', deep ? '#A8843F' : '#E9C46A');
+    set('route-light', 'line-opacity', deep ? 0.22 : 0.85);
+    set('route-flow', 'line-opacity', state.phase === 'arrival' ? 0 : deep ? 0.4 : 0.9);
+    set('alt-line', 'line-opacity', deep ? 0.22 : 0.55);
+  }
   function applyLight() {
-    const p = state.lightMode === 'auto' ? presetFor(new Date(), state.origin) : state.lightMode;
+    const deep = state.lightMode === 'deep';
+    document.body.classList.toggle('deep', deep);
+    const p = deep ? 'night' : state.lightMode === 'auto' ? presetFor(new Date(), state.origin) : state.lightMode;
+    setBasemap('show3dObjects', !deep);
+    setBasemap('showPointOfInterestLabels', !deep);
+    setBasemap('showTransitLabels', !deep);
+    setBasemap('showPlaceLabels', !deep);
+    setBasemap('showRoadLabels', !deep);
+    applyRouteStyle();
     document.querySelectorAll('[data-light]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.light === state.lightMode)));
     try { map.setConfigProperty('basemap', 'lightPreset', p); } catch (e) {}
     // Di notte rimettiamo le luci notturne originali di Mapbox (salvate all'avvio), senza cancellarle.
-    desiredLights = p === 'night' ? standardNightLights : sunLights(p);
+    desiredLights = deep ? DEEP_LIGHTS : p === 'night' ? standardNightLights : sunLights(p);
     enforceLights();
     const t = sunTimes(new Date(), state.origin);
     const names = { dawn: 'alba', day: 'giorno', dusk: 'tramonto', night: 'notte' };
-    $('#sunLine').innerHTML = t ? 'Alba <b>' + fmtHM(t.sunrise) + '</b> · Tramonto <b>' + fmtHM(t.sunset) + '</b>' + (state.lightMode === 'auto' ? ' · ora: ' + names[p] : '') : '';
+    $('#sunLine').innerHTML = t ? 'Alba <b>' + fmtHM(t.sunrise) + '</b> · Tramonto <b>' + fmtHM(t.sunset) + '</b>' + (state.lightMode === 'auto' ? ' · ora: ' + names[p] : deep ? ' · notte profonda' : '') : '';
   }
   document.querySelectorAll('[data-light]').forEach((b) => b.onclick = () => { state.lightMode = b.dataset.light; store('columbus-light', state.lightMode); applyLight(); });
   setInterval(applyLight, 60000);
@@ -1134,7 +1197,7 @@ window.addEventListener('unhandledrejection', (e) => {
     pin.remove(); beacon.remove();
     $('#starMenu').hidden = true;
     if (map.getSource('route')) { map.getSource('route').setData(EMPTY); map.getSource('alt').setData(EMPTY); }
-    if (map.getLayer('route-flow')) map.setPaintProperty('route-flow', 'line-opacity', 0.9);
+    applyRouteStyle();
     puck.setLngLat(state.origin).setRotation(heading.shown);
     show('browse');
     selectSection(0);
