@@ -295,10 +295,23 @@ body[data-sar="open"] #nav .recenter { display: none; }
 .odo .strip2 { display: flex; flex-direction: column; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
 .odo .strip2 span, .odo .sep { height: 1em; display: block; }
 .unit { font-size: 34px; font-style: italic; color: var(--gold-soft); }
-.maneuver { flex: none; margin-top: 30px; color: var(--gold-light); }
-.instruction { margin: 4px 0 0; font-family: var(--serif); font-style: italic; font-size: 30px; line-height: 1.1; }
+.maneuver-box { flex: none; margin-top: 26px; width: 92px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.maneuver { color: var(--gold-light); }
+.m-label { font-size: 13px; font-weight: 600; letter-spacing: .04em; color: var(--gold-light); text-align: center; line-height: 1.2; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+/* Compatto (predefinito): sotto la distanza solo la via. Esteso: la frase intera, più piccola e su fondo scuro. */
+.instruction { margin: 4px 0 0; font-family: var(--serif); font-size: 28px; line-height: 1.1; text-shadow: 0 1px 10px rgba(0,0,0,.85); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body[data-hud="verbose"] .instruction { font-style: italic; font-size: 21px; line-height: 1.2; white-space: normal; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
+.hud-top { position: relative; z-index: 1; }
+/* Fondo sfumato dietro le indicazioni, così le scritte della mappa non si mescolano al testo. */
+#nav::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: var(--hud-h, 250px); pointer-events: none; z-index: 0;
+  background: linear-gradient(180deg, rgba(5,8,13,0.82) 0%, rgba(5,8,13,0.62) 62%, rgba(5,8,13,0) 100%); }
+body[data-hud="verbose"] #nav::before { background: linear-gradient(180deg, rgba(5,8,13,0.94) 0%, rgba(5,8,13,0.86) 70%, rgba(5,8,13,0) 100%); }
+#nav .text-btn { font-family: var(--serif); font-size: 18px; }
+#nav .text-btn[aria-pressed="true"] { background: rgba(233,196,106,0.18); }
 .then { margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--secondary); }
 .then .kicker { font-size: 10px; }
+.then { text-shadow: 0 1px 6px rgba(0,0,0,.8); }
+.then b { color: var(--bone); font-weight: 500; }
 .sun-now { margin-top: 14px; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 18px; background: rgba(34,20,15,0.8); border: 1px solid rgba(247,178,106,0.45); font-size: 14px; font-weight: 500; }
 .trip { margin-bottom: calc(var(--bottom) + 4px); display: flex; align-items: center; gap: 12px; font-size: 15px; }
 .trip .eta { font-family: var(--serif); font-size: 26px; color: var(--gold-light); }
@@ -491,7 +504,10 @@ body.deep .deep-badge { display: block; }
         <p class="instruction" id="instruction"></p>
         <div class="then" id="then"></div>
       </div>
-      <svg class="maneuver" id="maneuver" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+      <div class="maneuver-box" id="maneuverBox">
+        <svg class="maneuver" id="maneuver" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+        <span class="m-label" id="mLabel"></span>
+      </div>
     </div>
     <div class="sun-now" id="sunNow" hidden><span style="color: var(--sun)">☀︎</span> Sole basso davanti a te</div>
     <div class="spacer"></div>
@@ -516,6 +532,7 @@ body.deep .deep-badge { display: block; }
       <button class="round gold tool sar-btn" id="sarBtn" aria-label="Cerca sul percorso"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></button>
       <button class="round gold tool voice-btn" id="voiceBtn" aria-label="Voce attiva" aria-pressed="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6L8 10z"/><path class="wave" d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M17 9l5 6M22 9l-5 6" style="display:none"/></svg></button>
       <button class="round gold tool view-btn" id="viewBtn" aria-label="Cambia vista 2D o 3D">3D</button>
+      <button class="round gold tool text-btn" id="textBtn" aria-label="Indicazioni estese" aria-pressed="false">Aa</button>
       <button class="round gold tool map-btn" id="mapBtn" aria-label="Mappa satellite" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg></button>
     </div>
   </section>
@@ -576,6 +593,7 @@ body.deep .deep-badge { display: block; }
           <li>Mappa Classica o Satellite, anche in guida</li>
           <li>Indicazioni vocali riscritte: tempi in base alla velocità, manovre ravvicinate dette insieme, regolabili in Voce</li>
           <li>In guida: comandi raccolti sotto la freccetta, mappa libera con le dita e "Riposiziona"</li>
+          <li>Indicazioni compatte (riassunto sotto il simbolo, la via in grande); "Aa" per la frase intera su fondo scuro</li>
         </ul>
       </div>
       <div class="stage-item">
@@ -2743,10 +2761,16 @@ window.addEventListener('unhandledrejection', (e) => {
       // Sole basso davanti, adesso (posizione e direzione simulate)
       $('#sunNow').hidden = !isGlare(s.bearing, sunPosition(new Date(), pos));
     }
-    const instr = cur.s.maneuver.instruction || '';
+    const isLast = !next;
+    const instr = hudVerbose ? (cur.s.maneuver.instruction || capital(phrase(cur, false, isLast)) + '.') : (streetOf(cur, isLast) || shortLabel(cur, isLast));
     if ($('#instruction').textContent !== instr) $('#instruction').textContent = instr;
-    $('#maneuver').innerHTML = iconFor(cur.s);
-    $('#then').innerHTML = next && next.s.maneuver.instruction ? '<span class="kicker">Poi</span><span>' + esc(next.s.name || next.s.maneuver.instruction) + '</span>' : '';
+    const icon = iconFor(cur.s);
+    if (s.lastIcon !== icon) { s.lastIcon = icon; $('#maneuver').innerHTML = icon; }
+    const lab = shortLabel(cur, isLast);
+    if ($('#mLabel').textContent !== lab) $('#mLabel').textContent = lab;
+    const thenHtml = next ? '<span class="kicker">Dopo</span><span><b>' + esc(shortLabel(next, !steps[k + 2])) + '</b>' + (streetOf(next, !steps[k + 2]) ? ' · ' + esc(streetOf(next, !steps[k + 2])) : '') + '</span>' : '';
+    if (s.lastThen !== thenHtml) { s.lastThen = thenHtml; $('#then').innerHTML = thenHtml; }
+    fitHudScrim();
     const remaining = s.p.total - s.t;
     const remTime = s.r.duration * remaining / s.p.total;
     $('#eta').textContent = fmtClock(remTime);
@@ -2754,6 +2778,50 @@ window.addEventListener('unhandledrejection', (e) => {
     $('#remKm').textContent = fmtKm(remaining);
   }
   $('#end').onclick = reset;
+
+  // ---------- Riquadro delle indicazioni ----------
+  // Compatto (predefinito): un riassunto di due parole sotto il simbolo ("3ª uscita", "A destra")
+  // e, grande, solo la via. Esteso (pulsante "Aa" o tocco sul testo): la frase intera di Mapbox.
+  let hudVerbose = load('columbus-hud-verbose', false);
+  function shortLabel(st, isLast) {
+    const m = st.s.maneuver || {}, mod = m.modifier || '';
+    const lr = /left/.test(mod) ? 'sinistra' : 'destra';
+    switch (m.type) {
+      case 'arrive': return isLast ? 'Arrivo' : 'Tappa';
+      case 'depart': return 'Partenza';
+      case 'roundabout': case 'rotary': return m.exit ? (m.exit + 'ª uscita') : 'Rotonda';
+      case 'roundabout turn': return 'Rotonda, a ' + lr;
+      case 'fork': return 'Bivio, ' + lr;
+      case 'merge': return 'Immettiti';
+      case 'on ramp': return 'Rampa a ' + lr;
+      case 'off ramp': return 'Uscita a ' + lr;
+    }
+    if (mod === 'uturn') return 'Inversione';
+    if (mod === 'straight' || !mod) return 'Dritto';
+    if (/slight/.test(mod)) return 'Tieni la ' + lr;
+    if (/sharp/.test(mod)) return 'Stretta a ' + lr;
+    return 'A ' + lr;
+  }
+  function streetOf(st, isLast) {
+    if ((st.s.maneuver || {}).type === 'arrive') return isLast && state.dest ? state.dest.name : '';
+    return st.s.name || st.s.ref || (st.s.destinations ? st.s.destinations.split(',')[0].trim() : '');
+  }
+  // Il fondo sfumato copre esattamente il riquadro delle indicazioni, più un margine per sfumare.
+  function fitHudScrim() {
+    const ph = $('#phone').getBoundingClientRect(), hb = $('#nav .hud-top').getBoundingClientRect();
+    const h = Math.round(hb.bottom - ph.top + 46);
+    if (h !== fitHudScrim.last) { fitHudScrim.last = h; $('#nav').style.setProperty('--hud-h', h + 'px'); }
+  }
+  function setHudVerbose(v) {
+    hudVerbose = v; store('columbus-hud-verbose', v);
+    document.body.dataset.hud = v ? 'verbose' : '';
+    $('#textBtn').setAttribute('aria-pressed', String(v));
+    $('#textBtn').setAttribute('aria-label', v ? 'Indicazioni compatte' : 'Indicazioni estese');
+    if (state.sim) { state.sim.lastThen = null; hud(state.sim, state.sim.pos || state.origin); }
+  }
+  $('#textBtn').onclick = () => setHudVerbose(!hudVerbose);
+  $('#nav .hud-top').addEventListener('click', () => setHudVerbose(!hudVerbose));
+  setHudVerbose(hudVerbose);
 
   // ---------- Ricerca lungo il percorso (in guida) ----------
   // Cerca una categoria lungo il tratto che manca (servizio Search Box "search along route":
