@@ -506,7 +506,7 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 (() => {
-  const EMBEDDED_TOKEN = 'pk.eyJ1IjoiZmVkZXJpY29hbnRvbmluaTE5OTQiLCJhIjoiY213amN5dTJyMDIwcDJ4czhsY2t6c202NCJ9.xsP32s8eJrEaB3tq9PG3nw';
+  const EMBEDDED_TOKEN = 'pk.';
   const DEFAULT_CENTER = [9.1900, 45.4642]; // Milano, piazza del Duomo
   const SIM_SPEED = 4;
   const $ = (s) => document.querySelector(s);
@@ -646,19 +646,94 @@ window.addEventListener('unhandledrejection', (e) => {
   setTimeout(() => { if (!mapLoaded) toast('La mappa ci sta mettendo più del solito a caricare: controlla la connessione.'); }, 30000);
 
   const EMPTY = { type: 'FeatureCollection', features: [] };
-  const DASHES = [[0, 4, 3], [0.5, 4, 2.5], [1, 4, 2], [1.5, 4, 1.5], [2, 4, 1], [2.5, 4, 0.5], [3, 4, 0], [0, 0.5, 3, 3.5], [0, 1, 3, 3], [0, 1.5, 3, 2.5], [0, 2, 3, 2], [0, 2.5, 3, 1.5], [0, 3, 3, 1], [0, 3.5, 3, 0.5]];
+  // ---------- Onda di luce sul percorso ----------
+  // Un'onda corre da dove sei alla destinazione: dove passa il filo si illumina fino alla
+  // luminosità piena, dietro lascia una scia che si spegne piano piano. Il percorso, a riposo,
+  // resta un po' più tenue. Niente tratteggi animati: erano loro a tremolare con lo zoom.
+  const WAVE = {
+    glow: { rgb: '247,220,150', peak: 0.42 },
+    core: { rgb: '250,229,172', peak: 1 }
+  };
+  // Forma dell'onda: [distanza dalla testa (in frazioni della scia), luce 0–1]. Davanti un bordo breve e morbido.
+  const WAVE_SHAPE = [[-1, 0], [-0.72, 0.14], [-0.48, 0.32], [-0.28, 0.52], [-0.12, 0.74], [-0.03, 0.93], [0, 1]];
+  const wave = { head: -1, tail: 0.3, front: 0.02, raf: 0, last: 0, start: 0, k: 1 };
+  const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function waveLight(d) { // d = posizione - testa (frazioni del percorso)
+    if (d > 0) return d >= wave.front ? 0 : 1 - d / wave.front;
+    const x = d / wave.tail;
+    if (x <= -1) return 0;
+    for (let i = 1; i < WAVE_SHAPE.length; i++) {
+      const [x1, y1] = WAVE_SHAPE[i];
+      if (x <= x1) { const [x0, y0] = WAVE_SHAPE[i - 1]; return y0 + (y1 - y0) * (x - x0) / (x1 - x0); }
+    }
+    return 1;
+  }
+  function waveGradient(head, look) {
+    const pts = new Set([0, 1]);
+    if (head > -1) {
+      WAVE_SHAPE.forEach(([x]) => pts.add(head + x * wave.tail));
+      pts.add(head + wave.front);
+    }
+    const xs = [...pts].filter((x) => x >= 0 && x <= 1).sort((a, b) => a - b);
+    const expr = ['interpolate', ['linear'], ['line-progress']];
+    let prev = -1;
+    xs.forEach((x) => {
+      if (x - prev < 1e-6) return;
+      prev = x;
+      const a = head > -1 ? waveLight(x - head) * look.peak * wave.k : 0;
+      expr.push(x, 'rgba(' + look.rgb + ',' + a.toFixed(3) + ')');
+    });
+    return expr;
+  }
+  function paintWave() {
+    try {
+      if (!map.getLayer('route-wave')) return;
+      map.setPaintProperty('route-wave-glow', 'line-gradient', waveGradient(wave.head, WAVE.glow));
+      map.setPaintProperty('route-wave', 'line-gradient', waveGradient(wave.head, WAVE.core));
+    } catch (e) {}
+  }
+  // Avvia l'onda sul percorso disegnato: parte dal punto in cui sei (from, 0–1) e arriva in fondo.
+  function startWave() {
+    cancelAnimationFrame(wave.raf);
+    if (reduceMotion || !state.routes.length) { wave.head = -1; paintWave(); return; }
+    const km = (state.routes[state.sel] || {}).distance / 1000 || 3;
+    const from = state.trim || 0;
+    const rest = 1 - from;
+    wave.tail = 0.32 * rest;
+    wave.front = Math.max(0.006, 0.025 * rest);
+    const travel = Math.min(5200, Math.max(2600, 2200 + km * 160)); // ms per arrivare in fondo
+    const fade = travel * 0.32; // la scia finisce di spegnersi oltre la destinazione
+    const pause = 900;
+    const cycle = travel + fade + pause;
+    wave.start = performance.now();
+    const ease = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const tick = (now) => {
+      wave.raf = requestAnimationFrame(tick);
+      if (now - wave.last < 30) return; // ~30 aggiornamenti al secondo bastano
+      wave.last = now;
+      const t = (now - wave.start) % cycle;
+      const base = state.trim || 0, span = 1 - base;
+      if (t < travel) wave.head = base + span * ease(t / travel);
+      else if (t < travel + fade) wave.head = 1 + wave.tail * ((t - travel) / fade);
+      else wave.head = -1;
+      paintWave();
+    };
+    wave.raf = requestAnimationFrame(tick);
+  }
+  function stopWave() { cancelAnimationFrame(wave.raf); wave.head = -1; paintWave(); }
+
   map.on('style.load', () => {
     map.addSource('route', { type: 'geojson', lineMetrics: true, data: EMPTY });
     map.addSource('alt', { type: 'geojson', data: EMPTY });
     const common = { type: 'line', slot: 'middle', layout: { 'line-cap': 'round', 'line-join': 'round' } };
     map.addLayer({ ...common, id: 'alt-line', source: 'alt', paint: { 'line-color': '#9AA1AC', 'line-opacity': 0.55, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 3, 18, 10], 'line-emissive-strength': 1 } });
-    map.addLayer({ ...common, id: 'route-glow', source: 'route', paint: { 'line-color': '#F3D58C', 'line-opacity': 0.5, 'line-blur': 12, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 14, 18, 46], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
-    map.addLayer({ ...common, id: 'route-core', source: 'route', paint: { 'line-color': '#E9C46A', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 5, 18, 18], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
-    map.addLayer({ ...common, id: 'route-light', source: 'route', paint: { 'line-color': '#FFF4D6', 'line-opacity': 0.85, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.2, 18, 5], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
-    map.addLayer({ ...common, id: 'route-flow', source: 'route', paint: { 'line-color': '#FFFFFF', 'line-opacity': 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 2, 18, 7], 'line-dasharray': DASHES[0], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
+    map.addLayer({ ...common, id: 'route-glow', source: 'route', paint: { 'line-color': '#F3D58C', 'line-opacity': 0.24, 'line-blur': 12, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 14, 18, 46], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
+    map.addLayer({ ...common, id: 'route-core', source: 'route', paint: { 'line-color': '#CDA85A', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 5, 18, 18], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
+    map.addLayer({ ...common, id: 'route-light', source: 'route', paint: { 'line-color': '#FFF4D6', 'line-opacity': 0.3, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1.2, 18, 5], 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
+    // L'onda: due strati in più (alone e filo) la cui luce dipende dalla posizione lungo il percorso.
+    map.addLayer({ ...common, id: 'route-wave-glow', source: 'route', paint: { 'line-blur': 14, 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 18, 18, 56], 'line-gradient': waveGradient(-1, WAVE.glow), 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
+    map.addLayer({ ...common, id: 'route-wave', source: 'route', paint: { 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 5, 18, 18], 'line-gradient': waveGradient(-1, WAVE.core), 'line-emissive-strength': 1, 'line-trim-offset': [0, 0] } });
     addDeepVeil();
-    let step = 0;
-    setInterval(() => { step = (step + 1) % DASHES.length; if (map.getLayer('route-flow')) map.setPaintProperty('route-flow', 'line-dasharray', DASHES[step]); }, 60);
     try { const l = map.getLights(); if (l && l.length) standardNightLights = JSON.parse(JSON.stringify(l)); } catch (e) {}
     applyLight();
   });
@@ -731,10 +806,11 @@ window.addEventListener('unhandledrejection', (e) => {
   function applyRouteStyle() {
     const deep = !!state.deep;
     const set = (id, prop, v) => { try { if (map.getLayer(id)) map.setPaintProperty(id, prop, v); } catch (e) {} };
-    set('route-glow', 'line-opacity', deep ? 0.12 : 0.5);
-    set('route-core', 'line-color', deep ? '#A8843F' : '#E9C46A');
-    set('route-light', 'line-opacity', deep ? 0.22 : 0.85);
-    set('route-flow', 'line-opacity', state.phase === 'arrival' ? 0 : deep ? 0.4 : 0.9);
+    set('route-glow', 'line-opacity', deep ? 0.1 : 0.24);
+    set('route-core', 'line-color', deep ? '#A8843F' : '#CDA85A');
+    set('route-light', 'line-opacity', deep ? 0.14 : 0.3);
+    wave.k = deep ? 0.55 : 1; // di notte fonda anche l'onda è più discreta
+    if (wave.head > -1) paintWave();
     set('alt-line', 'line-opacity', deep ? 0.22 : 0.55);
   }
   function applyLight() {
@@ -1253,9 +1329,11 @@ window.addEventListener('unhandledrejection', (e) => {
     map.getSource('route').setData({ type: 'Feature', geometry: sel.geometry, properties: {} });
     map.getSource('alt').setData({ type: 'FeatureCollection', features: state.routes.filter((_, i) => i !== state.sel).map((r) => ({ type: 'Feature', geometry: r.geometry, properties: {} })) });
     setTrim(0);
+    startWave();
   }
   function setTrim(f) {
-    ['route-glow', 'route-core', 'route-light', 'route-flow'].forEach((id) => { if (map.getLayer(id)) map.setPaintProperty(id, 'line-trim-offset', [0, Math.min(0.999, Math.max(0, f))]); });
+    state.trim = Math.min(0.999, Math.max(0, f));
+    ['route-glow', 'route-core', 'route-light', 'route-wave-glow', 'route-wave'].forEach((id) => { if (map.getLayer(id)) map.setPaintProperty(id, 'line-trim-offset', [0, Math.min(0.999, Math.max(0, f))]); });
   }
   function openPreview() {
     show('preview');
@@ -1433,7 +1511,7 @@ window.addEventListener('unhandledrejection', (e) => {
     $('#arrName').textContent = state.dest.name;
     $('#arrLine').textContent = fmtKm(s.r.distance) + ' in ' + Math.max(1, Math.round(s.r.duration / 60)) + ' minuti.';
     beacon.setLngLat(state.dest.coord).addTo(map);
-    map.setPaintProperty('route-flow', 'line-opacity', 0);
+    stopWave();
     let b = map.getBearing();
     const pad = { top: 0, bottom: 320, left: 0, right: 0 };
     const orbit = () => { b += 0.05; map.jumpTo({ center: state.dest.coord, bearing: b, pitch: 66, zoom: 17.2, padding: pad }); state.orbit = requestAnimationFrame(orbit); };
@@ -1456,7 +1534,8 @@ window.addEventListener('unhandledrejection', (e) => {
   function reset() {
     if (state.sim) cancelAnimationFrame(state.sim.raf);
     if (state.orbit) cancelAnimationFrame(state.orbit);
-    state.sim = null; state.orbit = null; state.routes = []; state.dest = null;
+    stopWave();
+    state.sim = null; state.orbit = null; state.routes = []; state.dest = null; state.trim = 0;
     pin.remove(); beacon.remove();
     $('#starMenu').hidden = true;
     if (map.getSource('route')) { map.getSource('route').setData(EMPTY); map.getSource('alt').setData(EMPTY); }
