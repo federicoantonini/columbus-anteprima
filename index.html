@@ -2260,6 +2260,19 @@ window.addEventListener('unhandledrejection', (e) => {
     renderVoices();
   };
   $('#openVoice').onclick = () => { $('#news').hidden = true; $('#voiceOverlay').hidden = false; renderVoices(); };
+  // Link di configurazione: …/#voce=CHIAVE salva la chiave su questo telefono, la toglie subito
+  // dall'indirizzo e apre la scelta della voce. La parte dopo "#" non viene mai inviata ai server.
+  (() => {
+    const m = location.hash.match(/^#voce=([A-Za-z0-9_-]{20,})$/);
+    if (!m) return;
+    voice.key = m[1];
+    try { localStorage.setItem('columbus-google-key', voice.key); } catch (e) {}
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    voice.urls.clear();
+    $('#voiceOverlay').hidden = false;
+    renderVoices();
+    toast('Chiave della voce salvata su questo telefono.');
+  })();
   function tick(now) {
     const s = state.sim;
     if (!s) return;
