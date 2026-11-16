@@ -1427,7 +1427,7 @@ window.addEventListener('unhandledrejection', (e) => {
   // di un secondo e perde luminosità, appena appena, salendo. Disegnata con un piccolo shader
   // (strato "custom" di Mapbox): gradiente continuo, e gli edifici davanti la nascondono.
   const DEST_LOOK = {
-    building: { bottom: 0.62, top: 0.26, offset: 1.2, edge: 0.9 },
+    building: { bottom: 0.78, top: 0.2, offset: 1.2, edge: 1, minHeight: 120, factor: 3, maxHeight: 320 },
     column: { bottom: 0.7, top: 0.04, radius: 5, height: 140, edge: 0 }
   };
   const destLight = { shape: null, raf: 0, reach: 0, cache: null, coord: null };
@@ -1437,7 +1437,8 @@ window.addEventListener('unhandledrejection', (e) => {
       const vs = 'attribute vec3 a_pos; attribute float a_t; uniform mat4 u_matrix; varying float v_t; void main() { v_t = a_t; gl_Position = u_matrix * vec4(a_pos, 1.0); }';
       const fs = 'precision mediump float; varying float v_t; uniform float u_bottom; uniform float u_top; uniform float u_reach; uniform float u_edge; uniform vec3 u_color;' +
         'void main() { if (v_t > u_reach) discard; float a = mix(u_bottom, u_top, v_t);' +
-        ' a *= smoothstep(u_reach, u_reach - 0.06, v_t);' +                       // bordo morbido della luce che sale
+        ' a *= smoothstep(u_reach, u_reach - 0.06, v_t);' +
+        ' a *= 1.0 - smoothstep(0.78, 1.0, v_t);' +                               // in cima svanisce, senza bordo netto                       // bordo morbido della luce che sale
         ' a += u_edge * (1.0 - smoothstep(0.0, 0.035, v_t)) * 0.5;' +             // filo più luminoso a terra
         ' gl_FragColor = vec4(u_color * a, a); }';
       const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
@@ -1556,7 +1557,10 @@ window.addEventListener('unhandledrejection', (e) => {
     if (!sh) sh = { kind: 'column', ring: ring(coord, DEST_LOOK.column.radius), height: DEST_LOOK.column.height };
     const rg = sh.kind === 'building' ? grow(sh.ring, DEST_LOOK.building.offset) : sh.ring;
     const origin = mapboxgl.MercatorCoordinate.fromLngLat(coord, 0);
-    destLight.shape = Object.assign({}, sh, { origin, vertices: wallVertices(rg, sh.height, origin), dirty: true });
+    // Le pareti di luce salgono ben oltre il tetto: almeno 120 m, o 3 volte l'altezza dell'edificio.
+    const B = DEST_LOOK.building;
+    const lightHeight = sh.kind === 'building' ? Math.min(B.maxHeight, Math.max(B.minHeight, sh.height * B.factor)) : sh.height;
+    destLight.shape = Object.assign({}, sh, { origin, vertices: wallVertices(rg, lightHeight, origin), dirty: true });
     destLight.coord = coord;
     cancelAnimationFrame(destLight.raf);
     const t0 = performance.now(), dur = reduceMotion ? 0 : 1300;
