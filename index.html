@@ -519,6 +519,7 @@ body.deep .deep-badge { display: block; }
   <div class="overlay" id="optsOverlay" hidden>
     <header><h2>Opzioni</h2><button class="close" data-close>Chiudi</button></header>
     <div class="scroll">
+      <div class="opt-row"><div><b>Mappa</b><small>Satellite: foto vere di edifici, verde, acqua e strade.</small></div><div class="seg" id="optSat"><button data-v="std">Classica</button><button data-v="sat">Satellite</button></div></div>
       <div class="opt-row"><div><b>Vista</b><small>2D: mappa dall'alto, senza palazzi in rilievo.</small></div><div class="seg" id="optView"><button data-v="3d">3D</button><button data-v="2d">2D</button></div></div>
       <div class="opt-row"><div><b>Filo d'oro attraverso i palazzi</b><small>In 3D, dove un edificio copre il percorso il filo d'oro resta visibile in trasparenza.</small></div><div class="seg" id="optXray"><button data-v="on">Sì</button><button data-v="off">No</button></div></div>
       <div class="opt-row"><div><b>Come ti muovi</b><small>Si cambia anche nell'anteprima di ogni percorso.</small></div><div class="seg" id="optMode"><button data-v="driving">Auto</button><button data-v="walking">A piedi</button></div></div>
@@ -716,7 +717,7 @@ window.addEventListener('unhandledrejection', (e) => {
   // ---------- Stato ----------
   const LAST_POS = load('columbus-last-pos', null); // ultima posizione buona vista su questo telefono
   const START = Array.isArray(LAST_POS) && LAST_POS.length === 2 ? LAST_POS : DEFAULT_CENTER;
-  const state = { view2d: load('columbus-view-2d', false), xray: load('columbus-xray', true), mode: load('columbus-mode', 'driving') === 'walking' ? 'walking' : 'driving', phase: 'browse', origin: START, dest: null, routes: [], sel: 0, sim: null, orbit: null, section: 0, lightMode: load('columbus-light', 'auto'), glare: {}, logMonth: null, sample: null, saved: false };
+  const state = { satellite: load('columbus-satellite', false), view2d: load('columbus-view-2d', false), xray: load('columbus-xray', true), mode: load('columbus-mode', 'driving') === 'walking' ? 'walking' : 'driving', phase: 'browse', origin: START, dest: null, routes: [], sel: 0, sim: null, orbit: null, section: 0, lightMode: load('columbus-light', 'auto'), glare: {}, logMonth: null, sample: null, saved: false };
   const SECTIONS = ['NAVIGA', 'ROTTE', 'DIARIO'];
 
   // ---------- Utilità ----------
@@ -807,13 +808,17 @@ window.addEventListener('unhandledrejection', (e) => {
   }
 
   // ---------- Mappa ----------
+  // Due mappe: "Classica" (Mapbox Standard, disegnata) e "Satellite" (Mapbox Standard Satellite:
+  // foto satellitari vere, con strade, nomi e luoghi sopra).
+  function styleUrl() { return state.satellite ? 'mapbox://styles/mapbox/standard-satellite' : 'mapbox://styles/mapbox/standard'; }
+  function baseConfig() { return { lightPreset: 'night', showPointOfInterestLabels: true, show3dFacades: true }; }
   mapboxgl.accessToken = token;
   let map;
   try {
     map = new mapboxgl.Map({
-      container: 'map', style: 'mapbox://styles/mapbox/standard',
+      container: 'map', style: styleUrl(),
       // show3dFacades: facciate 3D degli edifici con le finestre (di notte alcune sono accese).
-      config: { basemap: { lightPreset: 'night', showPointOfInterestLabels: true, show3dFacades: true } },
+      config: { basemap: baseConfig() },
       center: START, zoom: 15.6, pitch: state.view2d ? 0 : 60, bearing: -20, language: 'it'
     });
   } catch (e) { showFatal('Creazione della mappa: ' + (e && e.message ? e.message : String(e))); return; }
@@ -937,6 +942,12 @@ window.addEventListener('unhandledrejection', (e) => {
     applyXray();
     try { const l = map.getLights(); if (l && l.length) standardNightLights = JSON.parse(JSON.stringify(l)); } catch (e) {}
     applyLight();
+    // Dopo un cambio di mappa (Classica ↔ Satellite): rimetti percorso, onda e luce sulla destinazione.
+    if (state.routes && state.routes.length && map.getSource('route')) {
+      drawRoutes();
+      if (state.sim) setTrim(state.sim.t / state.sim.p.total);
+    }
+    if (destLight.shape) { destLight.shape.dirty = true; map.triggerRepaint(); }
   });
 
   // Luce del sole: direzione reale (azimut e altezza del sole) e ombre più marcate.
@@ -1033,11 +1044,19 @@ window.addEventListener('unhandledrejection', (e) => {
   function paintOptions() {
     const mark = (sel, val) => document.querySelectorAll(sel + ' button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.v || b.dataset.mode) === val)));
     mark('#optView', state.view2d ? '2d' : '3d');
+    mark('#optSat', state.satellite ? 'sat' : 'std');
     mark('#optXray', state.xray ? 'on' : 'off');
     mark('#optMode', state.mode);
     mark('#modes', state.mode);
   }
   document.querySelectorAll('#optView button').forEach((b) => b.onclick = () => setView2d(b.dataset.v === '2d'));
+  document.querySelectorAll('#optSat button').forEach((b) => b.onclick = () => setSatellite(b.dataset.v === 'sat'));
+  function setSatellite(v) {
+    if (v === state.satellite) return;
+    state.satellite = v; store('columbus-satellite', v); paintOptions();
+    // Cambia la mappa sotto: i nostri strati (percorso, onda, luce) vengono rimessi al caricamento.
+    try { map.setStyle(styleUrl(), { config: { basemap: baseConfig() } }); } catch (e) { toast('Cambio mappa non riuscito (' + e.message + ').'); }
+  }
   document.querySelectorAll('#optXray button').forEach((b) => b.onclick = () => setXray(b.dataset.v === 'on'));
   document.querySelectorAll('#optMode button').forEach((b) => b.onclick = () => setMode(b.dataset.v));
   document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => setMode(b.dataset.mode));
