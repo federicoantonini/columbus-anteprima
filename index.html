@@ -554,6 +554,7 @@ window.addEventListener('unhandledrejection', (e) => {
   function show(phase) {
     state.phase = phase;
     for (const id of ['browse', 'search', 'place', 'preview', 'nav', 'arrival']) $('#' + id).hidden = id !== phase;
+    if (typeof liftMapControls === 'function' && phase !== 'preview' && phase !== 'place') liftMapControls(null);
     document.body.dataset.phase = phase;
   }
   document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => { b.closest('.overlay').hidden = true; });
@@ -1199,7 +1200,11 @@ window.addEventListener('unhandledrejection', (e) => {
     if (pl.website) { site.href = pl.website; site.removeAttribute('aria-disabled'); } else { site.removeAttribute('href'); site.setAttribute('aria-disabled', 'true'); }
     $('#placeMenu').hidden = true;
     pin.setLngLat(pl.coord).addTo(map);
-    map.flyTo({ center: pl.coord, zoom: 16.4, pitch: 60, bearing: map.getBearing(), padding: { top: 80, bottom: 360, left: 0, right: 0 }, duration: 1600 });
+    requestAnimationFrame(() => {
+      const { padding } = freePadding($('#place .head'), $('#place .place-card'));
+      map.flyTo({ center: pl.coord, zoom: 16.4, pitch: 60, bearing: map.getBearing(), padding, duration: 1600 });
+      liftMapControls($('#place .place-card'));
+    });
   }
   $('#backPlace').onclick = () => { pin.remove(); show('search'); };
   $('#placeRoute').onclick = () => choose(state.place);
@@ -1259,11 +1264,48 @@ window.addEventListener('unhandledrejection', (e) => {
     pin.setLngLat(state.dest.coord).addTo(map);
     renderOptions();
     drawRoutes();
-    const coords = state.routes[state.sel].geometry.coordinates;
-    const b = coords.reduce((bb, c) => bb.extend(c), new mapboxgl.LngLatBounds(coords[0], coords[0]));
-    b.extend(state.origin);
-    const cam = map.cameraForBounds(b, { padding: { top: 190, bottom: 420, left: 50, right: 50 } });
-    if (cam) map.easeTo({ ...cam, pitch: 45, bearing: 0, duration: 1800 });
+    requestAnimationFrame(() => fitRoute(1800));
+  }
+  // Inquadra il percorso nello spazio libero tra intestazione e schede, con il 5% di margine.
+  // Prova diverse rotazioni della mappa e tiene quella che lo mostra più grande
+  // (a parità quasi perfetta preferisce il nord in alto).
+  const mercator = ([lon, lat]) => { const sn = Math.sin(lat * toR); return [(lon + 180) / 360 * 512, (0.5 - Math.log((1 + sn) / (1 - sn)) / (4 * Math.PI)) * 512]; };
+  const unmercator = ([x, y]) => { const n = Math.PI - 2 * Math.PI * y / 512; return [x / 512 * 360 - 180, toD * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))]; };
+  function freePadding(topEl, bottomEl) {
+    const ph = $('#phone').getBoundingClientRect(), W = ph.width, H = ph.height, m = 0.05;
+    const top = (topEl ? topEl.getBoundingClientRect().bottom - ph.top : 0) + H * m;
+    const bottom = (bottomEl ? ph.bottom - bottomEl.getBoundingClientRect().top : 0) + H * m;
+    return { padding: { top: Math.round(top), bottom: Math.round(bottom), left: Math.round(W * m), right: Math.round(W * m) }, W, H };
+  }
+  function fitRoute(duration) {
+    if (!state.routes.length) return;
+    const pts = state.routes[state.sel].geometry.coordinates.concat([state.origin, state.dest.coord]).map(mercator);
+    const { padding, W, H } = freePadding($('#preview .head'), $('#preview .bottom'));
+    const availW = Math.max(60, W - padding.left - padding.right), availH = Math.max(60, H - padding.top - padding.bottom);
+    const PITCH = 30, pitchCorrection = Math.log2(Math.cos(PITCH * toR));
+    let best = null;
+    for (let b = -90; b <= 90; b += 5) {
+      const c = Math.cos(b * toR), sn = Math.sin(b * toR);
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const [x, y] of pts) {
+        const rx = x * c + y * sn, ry = -x * sn + y * c;
+        if (rx < x0) x0 = rx; if (rx > x1) x1 = rx; if (ry < y0) y0 = ry; if (ry > y1) y1 = ry;
+      }
+      const zoom = Math.min(17, Math.log2(Math.min(availW / Math.max(x1 - x0, 1e-9), availH / Math.max(y1 - y0, 1e-9))) + pitchCorrection);
+      const score = zoom - 0.004 * Math.abs(b);
+      if (!best || score > best.score) {
+        const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+        best = { score, zoom, bearing: b, center: unmercator([cx * c - cy * sn, cx * sn + cy * c]) };
+      }
+    }
+    map.easeTo({ center: best.center, zoom: best.zoom, bearing: best.bearing, pitch: PITCH, padding, duration });
+    liftMapControls($('#preview .bottom'));
+  }
+  // Il logo e l'attribuzione di Mapbox devono restare visibili: li alziamo sopra le schede.
+  function liftMapControls(el) {
+    const ph = $('#phone').getBoundingClientRect();
+    const bottom = el ? Math.round(ph.bottom - el.getBoundingClientRect().top + 6) + 'px' : '';
+    document.querySelectorAll('.mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right').forEach((c) => { c.style.bottom = bottom; });
   }
   function renderOptions() {
     const fastest = state.routes.reduce((m, r, i) => r.duration < state.routes[m].duration ? i : m, 0);
@@ -1275,7 +1317,7 @@ window.addEventListener('unhandledrejection', (e) => {
       b.setAttribute('aria-pressed', String(i === state.sel));
       const summary = i === fastest ? 'La più veloce' : (r.legs[0].summary ? 'via ' + r.legs[0].summary : 'Alternativa');
       b.innerHTML = '<span class="min">' + Math.max(1, Math.round(r.duration / 60)) + '<i> min</i></span><b>' + esc(summary) + '</b><small>' + fmtKm(r.distance) + '</small><span class="traffic"><i style="background:' + color + '"></i>' + label + '</span>';
-      b.onclick = () => { state.sel = i; renderOptions(); drawRoutes(); };
+      b.onclick = () => { state.sel = i; renderOptions(); drawRoutes(); fitRoute(900); };
       $('#options').appendChild(b);
     });
     $('#startLabel').textContent = 'Parti · arrivo ' + fmtClock(state.routes[state.sel].duration);
