@@ -173,14 +173,17 @@ body[data-sar="open"] #nav .trip, body[data-sar="open"] #nav .sim { display: non
 .seg button { height: 32px; min-width: 52px; padding: 0 12px; border-radius: 15px; background: none; border: 0; color: var(--secondary); font-size: 13px; }
 .seg button[aria-pressed="true"] { background: var(--gold-light); color: #0A0D12; font-weight: 600; }
 .opts-btn { position: absolute; left: 20px; top: calc(var(--top) - 10px); width: 34px; height: 34px; border-radius: 50%; background: rgba(7,10,16,0.5); border: 1px solid rgba(233,196,106,0.45); color: var(--gold-light); display: flex; align-items: center; justify-content: center; padding: 0; }
-#nav .view-btn { position: absolute; right: 136px; bottom: calc(var(--bottom) + 64px); width: 48px; height: 48px; background: rgba(7,10,16,0.82); box-shadow: 0 6px 18px rgba(0,0,0,0.45); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+#nav .view-btn { position: absolute; right: 20px; bottom: calc(var(--bottom) + 176px); width: 48px; height: 48px; background: rgba(7,10,16,0.82); box-shadow: 0 6px 18px rgba(0,0,0,0.45); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
 body[data-sar="open"] #nav .view-btn { display: none; }
+#nav .map-btn { position: absolute; right: 20px; bottom: calc(var(--bottom) + 232px); width: 48px; height: 48px; background: rgba(7,10,16,0.82); box-shadow: 0 6px 18px rgba(0,0,0,0.45); }
+#nav .map-btn[aria-pressed="true"] { background: rgba(233,196,106,0.18); }
+body[data-sar="open"] #nav .map-btn { display: none; }
 /* Guida reale / simulazione */
 .start-row { display: flex; gap: 10px; }
 .start-row .go { flex: 1; min-width: 0; }
 .start-row .small-btn { flex: none; height: 56px; border-radius: 28px; padding: 0 18px; }
 /* Voce */
-#nav .voice-btn { position: absolute; right: 78px; bottom: calc(var(--bottom) + 64px); width: 48px; height: 48px; background: rgba(7,10,16,0.82); box-shadow: 0 6px 18px rgba(0,0,0,0.45); }
+#nav .voice-btn { position: absolute; right: 20px; bottom: calc(var(--bottom) + 120px); width: 48px; height: 48px; background: rgba(7,10,16,0.82); box-shadow: 0 6px 18px rgba(0,0,0,0.45); }
 #nav .voice-btn[aria-pressed="false"] { color: var(--muted); border-color: rgba(237,230,214,0.25); }
 body[data-sar="open"] #nav .voice-btn { display: none; }
 .key-row { display: flex; gap: 8px; margin: 8px 0 4px; }
@@ -194,6 +197,9 @@ body[data-sar="open"] #nav .voice-btn { display: none; }
 .voice-row .pick { flex: none; height: 38px; padding: 0 14px; border-radius: 19px; background: none; border: 1px solid rgba(233,196,106,0.45); color: var(--gold-light); font-size: 12px; letter-spacing: .1em; }
 .voice-row .pick[aria-pressed="true"] { background: var(--gold-light); color: #0A0D12; border-color: var(--gold-light); }
 .open-voice { margin-top: 10px; }
+.script-row { display: flex; gap: 12px; align-items: baseline; padding: 9px 0; border-bottom: 1px solid #1A2029; font-size: 14px; line-height: 1.4; }
+.script-row .d { flex: none; width: 64px; color: var(--gold-soft); font-variant-numeric: tabular-nums; font-size: 12px; }
+.script-row .k { flex: none; font-size: 10px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; width: 44px; }
 .stop-pin { width: 22px; height: 22px; border-radius: 50%; background: #0C1320; border: 2px solid var(--gold-light); box-shadow: 0 0 0 4px rgba(243,213,140,0.2); }
 .result { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 0; background: none; border: 0; border-bottom: 1px solid #1A2029; text-align: left; }
 .result .ic { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--raised); display: flex; align-items: center; justify-content: center; color: var(--gold); }
@@ -498,6 +504,7 @@ body.deep .deep-badge { display: block; }
       <span class="dot"></span><span id="remKm"></span>
       <button class="end" id="end">Fine</button>
     </div>
+    <button class="round gold map-btn" id="mapBtn" aria-label="Mappa satellite" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg></button>
     <button class="round gold view-btn" id="viewBtn" aria-label="Cambia vista 2D o 3D">3D</button>
     <button class="round gold voice-btn" id="voiceBtn" aria-label="Voce attiva" aria-pressed="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6L8 10z"/><path class="wave" d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M17 9l5 6M22 9l-5 6" style="display:none"/></svg></button>
     <button class="round gold sar-btn" id="sarBtn" aria-label="Cerca sul percorso"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></button>
@@ -532,6 +539,15 @@ body.deep .deep-badge { display: block; }
       <p class="muted">Columbus legge le indicazioni con una voce di Google (Chirp 3 HD). Senza chiave usa la voce del telefono.</p>
       <div class="kicker" style="margin-top:18px">Chiave Google Text-to-Speech</div>
       <div class="key-row"><input id="ttsKey" placeholder="Incolla qui la chiave (AIza…)" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="small-btn" id="ttsSave">Salva</button></div>
+      <div class="kicker" style="margin-top:22px">Indicazioni</div>
+      <div class="opt-row"><div><b>Quante</b><small>Essenziali: solo "tra poco" e "ora". Dettagliate: anche "continua per…" sui tratti lunghi.</small></div><div class="seg" id="coLevel"><button data-v="essential">Poche</button><button data-v="normal">Normali</button><button data-v="detailed">Tante</button></div></div>
+      <div class="opt-row"><div><b>Anticipo</b><small>Quanto prima della manovra arrivano gli avvisi (si adatta alla velocità).</small></div><div class="seg" id="coAdvance"><button data-v="late">Tardi</button><button data-v="normal">Normale</button><button data-v="early">Presto</button></div></div>
+      <div class="opt-row"><div><b>Nomi delle strade</b><small>"Svolta a destra in Via Nomentana" oppure solo "Svolta a destra".</small></div><div class="seg" id="coNames"><button data-v="on">Sì</button><button data-v="off">No</button></div></div>
+      <div id="scriptBlock" hidden>
+        <div class="block-head"><div class="kicker">Copione del percorso</div><button class="link-btn" id="scriptRefresh">Aggiorna</button></div>
+        <div id="script"></div>
+      </div>
+      <div class="kicker" style="margin-top:22px">Voci</div>
       <div class="hint" id="voiceHint"></div>
       <div id="voiceList"></div>
     </div>
@@ -547,6 +563,8 @@ body.deep .deep-badge { display: block; }
           <li>Filo d'oro visibile in trasparenza attraverso i palazzi</li>
           <li>In auto o a piedi, nell'anteprima del percorso</li>
           <li>La luce sulla destinazione sceglie solo l'edificio giusto; giardini e piazze hanno la colonna</li>
+          <li>Mappa Classica o Satellite, anche in guida</li>
+          <li>Indicazioni vocali riscritte: tempi in base alla velocità, manovre ravvicinate dette insieme, regolabili in Voce</li>
         </ul>
       </div>
       <div class="stage-item">
@@ -1045,6 +1063,8 @@ window.addEventListener('unhandledrejection', (e) => {
     const mark = (sel, val) => document.querySelectorAll(sel + ' button').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.v || b.dataset.mode) === val)));
     mark('#optView', state.view2d ? '2d' : '3d');
     mark('#optSat', state.satellite ? 'sat' : 'std');
+    const mb = document.getElementById('mapBtn');
+    if (mb) { mb.setAttribute('aria-pressed', String(state.satellite)); mb.setAttribute('aria-label', state.satellite ? 'Mappa classica' : 'Mappa satellite'); }
     mark('#optXray', state.xray ? 'on' : 'off');
     mark('#optMode', state.mode);
     mark('#modes', state.mode);
@@ -2129,14 +2149,9 @@ window.addEventListener('unhandledrejection', (e) => {
       return { s, at: cum[best] };
     });
     const total = cum[cum.length - 1] || 1;
-    // Frasi da dire e dove: Mapbox dà, per ogni tratto, a quanti metri dalla fine annunciare la manovra.
-    const cues = [];
-    steps.forEach((st, i) => {
-      const end = i + 1 < steps.length ? steps[i + 1].at : total;
-      (st.s.voiceInstructions || []).forEach((v) => { if (v.announcement) cues.push({ at: Math.max(0, end - (v.distanceAlongGeometry || 0)), text: v.announcement, done: false }); });
-    });
-    cues.sort((a, b) => a.at - b.at);
-    return { c, cum, total, steps, cues };
+    const p = { c, cum, total, steps, cues: [] };
+    p.cues = buildCues(p);
+    return p;
   }
   // "Parti": guida con il GPS. "Simula": il viaggio scorre da solo (×4), per provare a casa.
   function startNav(real) {
@@ -2190,6 +2205,7 @@ window.addEventListener('unhandledrejection', (e) => {
     if (!s || !s.real) return;
     const coord = [c.longitude, c.latitude], now = performance.now();
     if (typeof c.heading === 'number' && !isNaN(c.heading) && (c.speed || 0) > 1.5) s.course = c.heading;
+    if (typeof c.speed === 'number' && !isNaN(c.speed) && c.speed >= 0) s.speed = s.speed ? s.speed * 0.6 + c.speed * 0.4 : c.speed;
     // Prima cerco vicino a dove eravamo (così un incrocio o un cavalcavia non fanno saltare avanti), poi ovunque.
     let w = snapToRoute(s.p, coord, s.seg - 3, s.seg + 400);
     const OFF_ROUTE = offRoute();
@@ -2326,12 +2342,152 @@ window.addEventListener('unhandledrejection', (e) => {
     v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 2, true);
     return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
   }
-  // In guida: quando si supera il punto di una frase, la si dice (solo la più recente, se ce n'è più d'una).
-  function voiceTick(s) {
-    let due = null;
-    for (const c of s.p.cues) { if (c.done) continue; if (s.t >= c.at) { c.done = true; due = c; } else break; }
-    if (due && s.t - due.at < 250) voice.say(due.text);
+  // ---------- Le indicazioni a voce (il "copione") ----------
+  // Per ogni manovra fino a tre avvisi:
+  //   "presto"    ~30 s prima ("Tra 1 chilometro, …"), solo se il tratto è lungo;
+  //   "prepara"   ~12 s prima ("Tra 200 metri, svolta a destra in Via …");
+  //   "ora"       pochi secondi prima, calcolato sulla velocità del momento ("Svolta a destra in Via …").
+  // Le distanze dette sono tonde (100, 150, 200, 300, 500 m, 1 km…) e scelte in base alla velocità
+  // prevista sul tratto, così la frase è pronta in anticipo e coincide con il punto in cui viene detta.
+  // Due manovre ravvicinate si dicono insieme ("…, poi subito a sinistra").
+  const callouts = Object.assign({ level: 'normal', advance: 'normal', names: true }, load('columbus-callouts', {}));
+  const ADV = { late: 0.75, normal: 1, early: 1.3 };
+  const NICE = [20, 30, 50, 80, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000];
+  const nice = (m) => NICE.reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a);
+  const ORD = ['', 'prima', 'seconda', 'terza', 'quarta', 'quinta', 'sesta', 'settima', 'ottava', 'nona'];
+  function spoken(m) {
+    if (m < 1000) return m + ' metri';
+    if (m === 1000) return 'un chilometro';
+    if (m === 1500) return 'un chilometro e mezzo';
+    if (m === 2500) return 'due chilometri e mezzo';
+    const km = Math.round(m / 100) / 10;
+    return String(km).replace('.', ',') + ' chilometri';
   }
+  const capital = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const SILENT_TYPES = ['new name', 'notification', 'exit roundabout', 'exit rotary', 'depart', 'use lane'];
+  function speaks(st) {
+    const m = st.s.maneuver || {};
+    if (SILENT_TYPES.includes(m.type)) return false;
+    if ((m.type === 'continue' || m.type === 'turn') && (!m.modifier || m.modifier === 'straight')) return false;
+    return true;
+  }
+  const SIDE = { right: 'a destra', left: 'a sinistra', 'slight right': 'a destra', 'slight left': 'a sinistra', 'sharp right': 'a destra', 'sharp left': 'a sinistra' };
+  // La manovra in parole. short = forma breve per i concatenamenti ("poi subito a sinistra").
+  function phrase(st, short, isLast) {
+    const m = st.s.maneuver || {}, mod = m.modifier || '', side = SIDE[mod] || '';
+    const name = callouts.names && st.s.name ? st.s.name : (callouts.names && st.s.ref ? st.s.ref : '');
+    const dest = callouts.names && st.s.destinations ? st.s.destinations.split(',')[0].trim() : '';
+    const into = name && !short ? ' in ' + name : '';
+    let t;
+    switch (m.type) {
+      case 'arrive':
+        t = isLast ? 'la destinazione è ' + (/right/.test(mod) ? 'sulla destra' : /left/.test(mod) ? 'sulla sinistra' : 'davanti a te') : 'la tappa è ' + (/right/.test(mod) ? 'sulla destra' : /left/.test(mod) ? 'sulla sinistra' : 'davanti a te');
+        return short ? (isLast ? 'sei arrivato' : 'la tappa') : t;
+      case 'roundabout': case 'rotary': case 'roundabout turn':
+        if (m.exit) return (short ? 'alla rotonda la ' : 'alla rotonda prendi la ') + (ORD[m.exit] || m.exit + 'ª') + ' uscita' + (name && !short ? ', ' + name : '');
+        return 'alla rotonda vai ' + (side || 'dritto');
+      case 'fork': return 'al bivio tieni la ' + (/left/.test(mod) ? 'sinistra' : 'destra') + (dest && !short ? ', verso ' + dest : '');
+      case 'merge': return 'immettiti' + (name && !short ? ' su ' + name : '');
+      case 'on ramp': return 'prendi la rampa ' + (side || '') + (dest && !short ? ' verso ' + dest : '');
+      case 'off ramp': return "prendi l'uscita " + (side || '') + (dest && !short ? ' verso ' + dest : '');
+      case 'end of road': return (short ? '' : 'in fondo alla strada ') + 'svolta ' + (side || 'dritto') + into;
+    }
+    if (mod === 'uturn') return 'fai inversione a U' + (short ? '' : into);
+    if (/slight/.test(mod)) return 'tieni la ' + (/left/.test(mod) ? 'sinistra' : 'destra') + into;
+    if (/sharp/.test(mod)) return 'svolta decisamente ' + side + into;
+    if (short) return side;
+    return 'svolta ' + side + into;
+  }
+  function buildCues(p) {
+    const walk = state.mode === 'walking', adv = ADV[callouts.advance] || 1;
+    const st = p.steps, cues = [], chained = new Set();
+    const lastArrive = st.length - 1;
+    const speedOn = (i) => walk ? 1.4 : Math.min(36, Math.max(5, (st[i].s.distance || 0) / Math.max(1, st[i].s.duration || 1)));
+    // Partenza: dove andare per primo.
+    const firstIdx = st.findIndex((x, i) => i > 0 && speaks(x));
+    if (firstIdx > 0) {
+      const d = st[firstIdx].at, name = callouts.names && st[0].s.name ? ' su ' + st[0].s.name : '';
+      const close = d < (walk ? 40 : 250);
+      cues.push({ at: 0, m: -1, tier: 0, kind: 'via', text: close ? capital(phrase(st[firstIdx], false, firstIdx === lastArrive)) + '.' : 'Si parte. Prosegui' + name + ' per ' + spoken(nice(d)) + '.' });
+      if (close) chained.add(firstIdx);
+    }
+    for (let i = 1; i < st.length; i++) {
+      if (!speaks(st[i])) continue;
+      const at = st[i].at, prevAt = st[i - 1].at, gap = at - prevAt, v = speedOn(i - 1);
+      const isLast = i === lastArrive;
+      const j = st.findIndex((x, k) => k > i && speaks(x));
+      const chain = j > 0 && (st[j].at - at) <= Math.max(walk ? 25 : 120, v * 7);
+      const then = chain ? ', poi ' + (st[j].at - at < (walk ? 15 : 80) ? 'subito ' : '') + phrase(st[j], true, j === lastArrive) : '';
+      const what = phrase(st[i], false, isLast);
+      let prepAt = null;
+      if (!chained.has(i)) {
+        if (!walk && callouts.level !== 'essential') {
+          const early = Math.min(2000, Math.max(400, nice(30 * v * adv)));
+          if (gap > early * 1.25 + 100) cues.push({ at: at - early, m: i, tier: 1, kind: 'presto', text: 'Tra ' + spoken(early) + ', ' + what + '.' });
+        }
+        const prep = walk ? nice(Math.max(30, 25 * adv)) : Math.min(1000, Math.max(100, nice(12 * v * adv)));
+        if (gap > prep + (walk ? 10 : 40)) { prepAt = prep; cues.push({ at: at - prep, m: i, tier: 2, kind: 'prepara', text: 'Tra ' + spoken(prep) + ', ' + what + then + '.' }); }
+      }
+      // "Ora": punto deciso in guida in base alla velocità del momento.
+      const nowText = isLast ? 'Sei arrivato. ' + capital(what) + '.' : (st[i].s.maneuver.type === 'arrive' ? 'Hai raggiunto la tappa.' : capital(what) + then + '.');
+      // Mai prima del "prepara" (al massimo al 60% della sua distanza) né prima della manovra precedente.
+      cues.push({ maneuverAt: at, nowSec: (walk ? 5 : 4) * adv, minNow: walk ? 6 : 20, cap: prepAt ? prepAt * 0.6 : Math.max(walk ? 6 : 20, gap * 0.8), notBefore: i > 1 ? prevAt + (walk ? 3 : 10) : 0, m: i, tier: 3, kind: 'ora', text: nowText });
+      if (chain) chained.add(j);
+      // Dettagliate: dopo la manovra, se la prossima è lontana, "Continua per…".
+      if (callouts.level === 'detailed' && j > 0 && !isLast) {
+        const rest = st[j].at - at;
+        if (rest > (walk ? 400 : 2500)) cues.push({ at: at + (walk ? 15 : 60), m: i, tier: 4, kind: 'continua', text: 'Continua' + (callouts.names && st[i].s.name ? ' su ' + st[i].s.name : '') + ' per ' + spoken(nice(rest)) + '.' });
+      }
+    }
+    cues.forEach((c) => { c.done = false; });
+    return cues;
+  }
+  // In guida: quando si arriva al punto di un avviso lo si dice. Se ne scattano più insieme, vale il più recente.
+  function voiceTick(s) {
+    const v = Math.max(1, s.speed || 8);
+    let due = null, dueAt = -Infinity;
+    for (const c of s.p.cues) {
+      if (c.done) continue;
+      const trigger = c.maneuverAt !== undefined ? Math.max(c.notBefore, c.maneuverAt - Math.min(c.cap, Math.max(c.minNow, v * c.nowSec))) : c.at;
+      if (s.t < trigger) continue;
+      c.done = true;
+      const ref = c.maneuverAt !== undefined ? c.maneuverAt : c.at;
+      const stale = c.maneuverAt !== undefined ? s.t > c.maneuverAt + 10 : s.t - c.at > Math.max(60, v * 6);
+      if (!stale && ref >= dueAt) { due = c; dueAt = ref; }
+    }
+    if (due) {
+      // Gli avvisi precedenti della stessa manovra ormai sono superati.
+      s.p.cues.forEach((c) => { if (c.m === due.m && c.tier < due.tier) c.done = true; });
+      voice.say(due.text);
+    }
+  }
+  // Cambio delle impostazioni a guida in corso: rifà il copione da qui in avanti.
+  function rebuildCues() {
+    const s = state.sim; if (!s) return;
+    s.p.cues = buildCues(s.p);
+    s.p.cues.forEach((c) => { const at = c.maneuverAt !== undefined ? c.maneuverAt : c.at; if (at <= s.t + 1) c.done = true; });
+    voice.prepare(s.p);
+  }
+  function paintCallouts() {
+    const mark = (sel, val) => document.querySelectorAll(sel + ' button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === val)));
+    mark('#coLevel', callouts.level); mark('#coAdvance', callouts.advance); mark('#coNames', callouts.names ? 'on' : 'off');
+    renderScript();
+  }
+  function setCallout(k, v) { callouts[k] = v; store('columbus-callouts', callouts); rebuildCues(); paintCallouts(); }
+  document.querySelectorAll('#coLevel button').forEach((b) => b.onclick = () => setCallout('level', b.dataset.v));
+  document.querySelectorAll('#coAdvance button').forEach((b) => b.onclick = () => setCallout('advance', b.dataset.v));
+  document.querySelectorAll('#coNames button').forEach((b) => b.onclick = () => setCallout('names', b.dataset.v === 'on'));
+  // Il copione del percorso attuale (o dell'anteprima), da leggere e ascoltare frase per frase.
+  function renderScript() {
+    const r = state.sim ? state.sim.r : state.routes && state.routes[state.sel];
+    $('#scriptBlock').hidden = !r;
+    if (!r) return;
+    const p = state.sim ? state.sim.p : prepare(r);
+    const rows = p.cues.map((c) => ({ c, at: c.maneuverAt !== undefined ? Math.max(c.notBefore, c.maneuverAt - Math.min(c.cap, Math.max(c.minNow, 8 * c.nowSec))) : c.at })).sort((a, b) => a.at - b.at);
+    $('#script').innerHTML = rows.slice(0, 40).map(({ c, at }, i) => '<div class="script-row"><span class="d">' + (at <= 0 ? 'partenza' : fmtKm(at)) + '</span><span class="k">' + c.kind + '</span><span>' + esc(c.text) + '</span></div>').join('') + (rows.length > 40 ? '<p class="muted">…e altre ' + (rows.length - 40) + ' frasi.</p>' : '');
+    $('#script').querySelectorAll('.script-row').forEach((row, i) => row.onclick = () => { voice.unlock(); voice.say(rows[i].c.text); });
+  }
+  $('#scriptRefresh').onclick = renderScript;
   function paintVoiceBtn() {
     const b = $('#voiceBtn');
     b.setAttribute('aria-pressed', String(!voice.muted));
@@ -2346,6 +2502,7 @@ window.addEventListener('unhandledrejection', (e) => {
   const PLAY_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
   const VOICE_SAMPLE = 'Tra 300 metri, alla rotonda prendi la seconda uscita e continua su Via Nomentana.';
   async function renderVoices() {
+    paintCallouts();
     $('#ttsKey').value = voice.key;
     const list = $('#voiceList');
     list.innerHTML = '';
@@ -2397,6 +2554,7 @@ window.addEventListener('unhandledrejection', (e) => {
   $('#optsBtn').onclick = () => { paintOptions(); $('#optsOverlay').hidden = false; };
   $('#optVoice').onclick = () => { $('#optsOverlay').hidden = true; $('#voiceOverlay').hidden = false; renderVoices(); };
   $('#viewBtn').onclick = () => setView2d(!state.view2d);
+  $('#mapBtn').onclick = () => { setSatellite(!state.satellite); toast(state.satellite ? 'Mappa satellite' : 'Mappa classica'); };
   $('#openVoice').onclick = () => { $('#news').hidden = true; $('#voiceOverlay').hidden = false; renderVoices(); };
   // Link di configurazione: …/#voce=CHIAVE salva la chiave su questo telefono, la toglie subito
   // dall'indirizzo e apre la scelta della voce. La parte dopo "#" non viene mai inviata ai server.
@@ -2426,6 +2584,7 @@ window.addEventListener('unhandledrejection', (e) => {
       const diff = ((want - s.bearing + 540) % 360) - 180; s.bearing = (s.bearing + diff * Math.min(1, dt * 2.5) + 360) % 360;
     } else {
       const avg = Math.min(35, Math.max(0.8, s.r.distance / Math.max(1, s.r.duration))); // m/s, traffico compreso (a piedi ~1,4)
+      s.speed = avg * simSpeed;
       s.t = Math.min(s.p.total, s.t + avg * simSpeed * dt);
       while (s.seg < s.p.cum.length - 2 && s.p.cum[s.seg + 1] < s.t) s.seg++;
       const a = s.p.c[s.seg], b = s.p.c[Math.min(s.seg + 1, s.p.c.length - 1)];
