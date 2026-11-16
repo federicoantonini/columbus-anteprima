@@ -656,7 +656,7 @@ window.addEventListener('unhandledrejection', (e) => {
   };
   // Forma dell'onda: [distanza dalla testa (in frazioni della scia), luce 0–1]. Davanti un bordo breve e morbido.
   const WAVE_SHAPE = [[-1, 0], [-0.72, 0.14], [-0.48, 0.32], [-0.28, 0.52], [-0.12, 0.74], [-0.03, 0.93], [0, 1]];
-  const wave = { head: -1, tail: 0.3, front: 0.02, raf: 0, last: 0, start: 0, k: 1 };
+  const wave = { head: -1, tail: 0.3, front: 0.02, raf: 0, last: 0, k: 1, amp: 1 };
   const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function waveLight(d) { // d = posizione - testa (frazioni del percorso)
     if (d > 0) return d >= wave.front ? 0 : 1 - d / wave.front;
@@ -680,7 +680,7 @@ window.addEventListener('unhandledrejection', (e) => {
     xs.forEach((x) => {
       if (x - prev < 1e-6) return;
       prev = x;
-      const a = head > -1 ? waveLight(x - head) * look.peak * wave.k : 0;
+      const a = head > -1 ? waveLight(x - head) * look.peak * wave.k * wave.amp : 0;
       expr.push(x, 'rgba(' + look.rgb + ',' + a.toFixed(3) + ')');
     });
     return expr;
@@ -692,29 +692,41 @@ window.addEventListener('unhandledrejection', (e) => {
       map.setPaintProperty('route-wave', 'line-gradient', waveGradient(wave.head, WAVE.core));
     } catch (e) {}
   }
-  // Avvia l'onda sul percorso disegnato: parte dal punto in cui sei (from, 0–1) e arriva in fondo.
+  // Avvia l'onda sul percorso disegnato.
+  // Anteprima: corre da dove sei fino alla destinazione, con una scia lunga (un terzo del percorso).
+  // Guida: onda corta e più frequente, che corre solo sul tratto davanti all'auto (circa 600 m).
+  const WAVE_NAV = { ahead: 600, tail: 90, front: 14, travel: 1300, pause: 450 }; // metri e millisecondi
   function startWave() {
     cancelAnimationFrame(wave.raf);
     if (reduceMotion || !state.routes.length) { wave.head = -1; paintWave(); return; }
-    const km = (state.routes[state.sel] || {}).distance / 1000 || 3;
-    const from = state.trim || 0;
-    const rest = 1 - from;
-    wave.tail = 0.32 * rest;
-    wave.front = Math.max(0.006, 0.025 * rest);
-    const travel = Math.min(5200, Math.max(2600, 2200 + km * 160)); // ms per arrivare in fondo
-    const fade = travel * 0.32; // la scia finisce di spegnersi oltre la destinazione
-    const pause = 900;
-    const cycle = travel + fade + pause;
-    wave.start = performance.now();
     const ease = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    let cyc = null;
+    // Parametri di un giro dell'onda, ricalcolati a ogni giro (la fase può cambiare: anteprima → guida).
+    const plan = (now) => {
+      const meters = (state.routes[state.sel] || {}).distance || 3000;
+      const base = state.trim || 0, rest = 1 - base;
+      if (state.phase === 'nav') {
+        const m = (x) => x / meters; // metri → frazione del percorso
+        const reach = Math.min(rest, m(WAVE_NAV.ahead));
+        return { start: now, nav: true, reach, tail: Math.min(m(WAVE_NAV.tail), reach * 0.4), front: Math.max(1e-5, m(WAVE_NAV.front)), travel: WAVE_NAV.travel, fade: 0, pause: WAVE_NAV.pause };
+      }
+      const travel = Math.min(5200, Math.max(2600, 2200 + meters / 1000 * 160));
+      return { start: now, nav: false, reach: rest, tail: 0.32 * rest, front: Math.max(0.006, 0.025 * rest), travel, fade: travel * 0.32, pause: 900 };
+    };
     const tick = (now) => {
       wave.raf = requestAnimationFrame(tick);
       if (now - wave.last < 30) return; // ~30 aggiornamenti al secondo bastano
       wave.last = now;
-      const t = (now - wave.start) % cycle;
-      const base = state.trim || 0, span = 1 - base;
-      if (t < travel) wave.head = base + span * ease(t / travel);
-      else if (t < travel + fade) wave.head = 1 + wave.tail * ((t - travel) / fade);
+      if (!cyc || now - cyc.start >= cyc.travel + cyc.fade + cyc.pause || (cyc.nav !== (state.phase === 'nav'))) cyc = plan(now);
+      wave.tail = cyc.tail; wave.front = cyc.front;
+      const t = now - cyc.start, base = state.trim || 0;
+      wave.amp = 1;
+      if (t < cyc.travel) {
+        const x = ease(t / cyc.travel);
+        wave.head = base + cyc.reach * x;
+        // In guida l'onda si spegne da sola alla fine del suo tratto, invece di uscire dal percorso.
+        if (cyc.nav && x > 0.7) wave.amp = Math.max(0, 1 - (x - 0.7) / 0.3);
+      } else if (t < cyc.travel + cyc.fade) wave.head = 1 + cyc.tail * ((t - cyc.travel) / cyc.fade);
       else wave.head = -1;
       paintWave();
     };
