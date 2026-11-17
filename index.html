@@ -34,6 +34,11 @@ input { font-family: inherit; }
 }
 #map { position: absolute; inset: 0; }
 .mapboxgl-ctrl-bottom-left, .mapboxgl-ctrl-bottom-right { bottom: 118px; }
+/* Torna alla tua posizione (schermata principale): sopra il sestante, a destra, sopra la "i" di Mapbox. */
+.locate { position: absolute; right: 16px; bottom: 170px; width: 46px; height: 46px; border-radius: 50%; padding: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(7,10,16,0.82); border: 1px solid rgba(233,196,106,0.55); box-shadow: 0 6px 18px rgba(0,0,0,0.45); animation: fadeIn .3s ease both; }
+.locate svg { filter: drop-shadow(0 0 5px rgba(243,213,140,0.6)); }
+body[data-panel="soft"] .locate, body[data-panel="solid"] .locate { display: none; }
 body[data-phase="nav"] .mapboxgl-ctrl-bottom-left, body[data-phase="nav"] .mapboxgl-ctrl-bottom-right { bottom: 84px; }
 .mapboxgl-ctrl-attrib { background: rgba(7,10,16,0.6) !important; }
 .mapboxgl-ctrl-attrib a { color: #8E949E !important; }
@@ -426,6 +431,7 @@ body.deep .deep-badge { display: block; }
     <div class="spacer" id="homeSpacer"></div>
     <div class="card" id="sectionCard"></div>
     <div class="section-view" id="sectionView" hidden></div>
+    <button class="locate" id="locateBtn" aria-label="Torna alla tua posizione" hidden><svg width="20" height="22" viewBox="0 0 36 40" aria-hidden="true"><path d="M18 2 L33 36 L18 28 L3 36 Z" fill="url(#lk)" stroke="#FFF4D6" stroke-width="1.4" stroke-linejoin="round"/><defs><linearGradient id="lk" x1="0" x2="1"><stop offset="0" stop-color="#B98F3E"/><stop offset=".5" stop-color="#C9A04E"/><stop offset=".5" stop-color="#F3D58C"/><stop offset="1" stop-color="#FFF1CC"/></linearGradient></defs></svg></button>
     <div class="sextant" id="sextant">
       <div class="pointer"></div>
       <div class="dial" id="dial"><div class="ticks"></div></div>
@@ -820,6 +826,7 @@ window.addEventListener('unhandledrejection', (e) => {
     for (const id of ['browse', 'search', 'category', 'place', 'preview', 'nav', 'arrival']) $('#' + id).hidden = id !== phase;
     if (typeof liftMapControls === 'function' && phase !== 'preview' && phase !== 'place' && phase !== 'category') liftMapControls(null);
     document.body.dataset.phase = phase;
+    try { updateLocateBtn(); } catch (e) {}
   }
   document.querySelectorAll('[data-close]').forEach((b) => b.onclick = () => { b.closest('.overlay').hidden = true; });
   $('#newsBtn').onclick = () => { $('#news').hidden = false; };
@@ -1228,8 +1235,22 @@ window.addEventListener('unhandledrejection', (e) => {
     const wait = SPLASH_MIN - (performance.now() - splashT0);
     if (wait > 0) { setTimeout(hideSplash, wait); return; }
     splashOpen = false; $('#splash').classList.add('gone');
+    setTimeout(() => { try { updateLocateBtn(); } catch (e) {} }, 1200);
   }
   setTimeout(hideSplash, 5000);
+  // Pulsante "torna alla tua posizione": compare solo quando la mappa non è centrata su di te.
+  function updateLocateBtn() {
+    const btn = document.getElementById('locateBtn'); if (!btn) return;
+    let off = false;
+    if (state.phase === 'browse' && state.section === 0 && !splashOpen) {
+      const el = map.getContainer(), W = el.clientWidth, H = el.clientHeight;
+      const want = { x: W / 2, y: 120 + (H - 360) / 2 }, at = map.project(state.origin);
+      off = Math.hypot(at.x - want.x, at.y - want.y) > 60 || Math.abs(map.getZoom() - 15.6) > 1.5;
+    }
+    if (btn.hidden === off) btn.hidden = !off;
+  }
+  map.on('moveend', updateLocateBtn);
+  document.getElementById('locateBtn').onclick = () => { browseCamera(900); };
   function placeCamera(animated) {
     if (state.phase !== 'browse' || state.section !== 0) return;
     if (animated) browseCamera(1200);
@@ -1241,7 +1262,7 @@ window.addEventListener('unhandledrejection', (e) => {
       const precise = (c.accuracy || 9999) <= PRECISE;
       state.origin = [c.longitude, c.latitude];
       if (typeof c.heading === 'number' && !isNaN(c.heading) && (c.speed || 0) > 1) heading.course = c.heading;
-      if (!state.sim) puck.setLngLat(state.origin);
+      if (!state.sim) { puck.setLngLat(state.origin); updateLocateBtn(); }
       else if (state.sim.real) onNavFix(c);
       if (!hadFix) { hadFix = true; applyLight(); }
       if (precise) {
@@ -1323,6 +1344,7 @@ window.addEventListener('unhandledrejection', (e) => {
     $('#sectionView').hidden = !isPanel;
     document.body.dataset.panel = state.section === 2 ? 'solid' : isPanel ? 'soft' : '';
     if (state.section === 0) renderCard();
+    try { updateLocateBtn(); } catch (e) {}
     if (state.section === 1) renderSaved();
     if (state.section === 2) renderLogbook();
     if (haptic && navigator.userActivation && navigator.userActivation.hasBeenActive && navigator.vibrate) navigator.vibrate(8);
